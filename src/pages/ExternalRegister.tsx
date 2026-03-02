@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const FUNCOES_POLITICAS = [
   "Vereador(a)", "Presidente de Bairro", "Líder Comunitário",
@@ -32,8 +33,10 @@ interface InviteData {
 
 const supporterSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
+  email: z.string().trim().email("Email inválido").max(255),
+  password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres").max(72),
+  pin: z.string().regex(/^\d{4}$/, "PIN deve ter exatamente 4 dígitos"),
   telefone: z.string().trim().max(20).optional().or(z.literal("")),
-  email: z.string().trim().email("Email inválido").max(255).optional().or(z.literal("")),
   endereco: z.string().trim().max(200).optional().or(z.literal("")),
   bairro: z.string().trim().max(100).optional().or(z.literal("")),
   cidade: z.string().trim().max(100).optional().or(z.literal("")),
@@ -46,8 +49,9 @@ const supporterSchema = z.object({
 type FormData = z.infer<typeof supporterSchema>;
 
 const initialForm: FormData = {
-  nome: "", telefone: "", email: "", endereco: "",
-  bairro: "", cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "",
+  nome: "", email: "", password: "", pin: "",
+  telefone: "", endereco: "", bairro: "", cidade: "",
+  estado: "", cep: "", cpf: "", funcao_politica: "",
 };
 
 const FIELD_LABELS: Record<string, string> = {
@@ -73,7 +77,6 @@ export default function ExternalRegister() {
 
   const loadInviteAndConfig = async (t: string) => {
     try {
-      // Fetch invite link
       const { data: inviteData, error: inviteErr } = await supabase
         .from("invite_links")
         .select("campanha_id")
@@ -87,7 +90,6 @@ export default function ExternalRegister() {
         return;
       }
 
-      // Fetch campanha info
       const { data: campanha } = await supabase
         .from("campanhas")
         .select("nome, logo_url, cor_primaria")
@@ -101,7 +103,6 @@ export default function ExternalRegister() {
         campanha_cor: campanha?.cor_primaria,
       });
 
-      // Fetch form config
       const { data: configData } = await supabase
         .from("external_form_config")
         .select("*")
@@ -136,7 +137,7 @@ export default function ExternalRegister() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invite || !config) return;
+    if (!invite || !config || !token) return;
 
     const result = supporterSchema.safeParse(form);
     if (!result.success) {
@@ -147,23 +148,31 @@ export default function ExternalRegister() {
     }
 
     setSaving(true);
+    setFormErrors({});
     try {
       const data = result.data;
-      const { error: insertErr } = await supabase.from("supporters").insert({
-        campanha_id: invite.campanha_id,
-        nome: data.nome,
-        telefone: data.telefone || null,
-        email: data.email || null,
-        endereco: data.endereco || null,
-        bairro: data.bairro || null,
-        cidade: data.cidade || null,
-        estado: data.estado || null,
-        cep: data.cep || null,
-        cpf: data.cpf || null,
-        funcao_politica: data.funcao_politica || null,
-      } as any);
+      const res = await supabase.functions.invoke("register-external", {
+        body: {
+          token,
+          nome: data.nome,
+          email: data.email,
+          password: data.password,
+          pin: data.pin,
+          telefone: data.telefone || null,
+          cpf: data.cpf || null,
+          funcao_politica: data.funcao_politica || null,
+          endereco: data.endereco || null,
+          bairro: data.bairro || null,
+          cidade: data.cidade || null,
+          estado: data.estado || null,
+          cep: data.cep || null,
+        },
+      });
 
-      if (insertErr) throw insertErr;
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error || res.error?.message || "Erro ao cadastrar.");
+      }
+
       setSuccess(true);
     } catch (err: any) {
       setFormErrors({ _general: err.message || "Erro ao cadastrar." });
@@ -173,7 +182,7 @@ export default function ExternalRegister() {
   };
 
   const isFieldVisible = (field: string) => {
-    if (field === "nome") return true; // always required
+    if (field === "nome") return true;
     return config?.fields?.[field] === true;
   };
 
@@ -207,9 +216,9 @@ export default function ExternalRegister() {
             <CheckCircle className="w-12 h-12 text-green-600" />
             <h2 className="text-lg font-semibold">Cadastro Realizado!</h2>
             <p className="text-muted-foreground text-center">{config?.mensagem_sucesso}</p>
-            <Button onClick={() => { setSuccess(false); setForm(initialForm); }} variant="outline">
-              Cadastrar outra pessoa
-            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              Você já pode fazer login com seu email e senha. Use o PIN para acessar o sistema.
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -236,7 +245,7 @@ export default function ExternalRegister() {
         <Card>
           <CardHeader>
             <CardTitle>{config?.titulo || "Cadastro"}</CardTitle>
-            <CardDescription>Preencha seus dados para se cadastrar</CardDescription>
+            <CardDescription>Preencha seus dados para se cadastrar e ter acesso ao sistema</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -251,18 +260,41 @@ export default function ExternalRegister() {
                 {formErrors.nome && <p className="text-sm text-destructive">{formErrors.nome}</p>}
               </div>
 
+              {/* Account fields - always visible */}
+              <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-4">
+                <p className="text-sm font-medium text-primary">Dados de Acesso</p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input id="email" type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
+                  {formErrors.email && <p className="text-sm text-destructive">{formErrors.email}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha *</Label>
+                  <Input id="password" type="password" value={form.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="Mínimo 6 caracteres" maxLength={72} />
+                  {formErrors.password && <p className="text-sm text-destructive">{formErrors.password}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>PIN de 4 dígitos *</Label>
+                  <p className="text-xs text-muted-foreground">Usado para acesso rápido ao sistema</p>
+                  <InputOTP maxLength={4} value={form.pin} onChange={(v) => handleChange("pin", v)}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  {formErrors.pin && <p className="text-sm text-destructive">{formErrors.pin}</p>}
+                </div>
+              </div>
+
               {isFieldVisible("telefone") && (
                 <div className="space-y-2">
                   <Label htmlFor="telefone">Telefone</Label>
                   <Input id="telefone" value={form.telefone} onChange={(e) => handleChange("telefone", e.target.value)} placeholder="(00) 00000-0000" maxLength={20} />
-                </div>
-              )}
-
-              {isFieldVisible("email") && (
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
-                  {formErrors.email && <p className="text-sm text-destructive">{formErrors.email}</p>}
                 </div>
               )}
 
@@ -327,7 +359,7 @@ export default function ExternalRegister() {
                 className="w-full"
                 style={primaryColor ? { backgroundColor: primaryColor } : undefined}
               >
-                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</> : "Cadastrar"}
+                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Cadastrando...</> : "Cadastrar"}
               </Button>
             </form>
           </CardContent>
