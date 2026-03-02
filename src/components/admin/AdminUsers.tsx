@@ -11,7 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Loader2, Trash2, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Database } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -41,6 +43,7 @@ export function AdminUsers() {
   const [newUserCampanha, setNewUserCampanha] = useState<string>("");
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const { isMaster } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: users, isLoading: loadingUsers } = useQuery({
@@ -103,6 +106,24 @@ export function AdminUsers() {
         description: error.message,
         variant: "destructive"
       });
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ title: "Usuário excluído com sucesso!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro ao excluir usuário", description: error.message, variant: "destructive" });
     }
   });
 
@@ -299,6 +320,7 @@ export function AdminUsers() {
               <TableHead>PIN</TableHead>
               <TableHead>Funções</TableHead>
               <TableHead>Criado em</TableHead>
+              {isMaster && <TableHead>Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -343,6 +365,34 @@ export function AdminUsers() {
                 <TableCell>
                   {new Date(user.created_at).toLocaleDateString('pt-BR')}
                 </TableCell>
+                {isMaster && (
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir <strong>{user.name}</strong>? Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteUserMutation.mutate(user.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
