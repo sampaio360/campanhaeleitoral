@@ -811,6 +811,7 @@ export type Database = {
           endereco: string | null
           estado: string | null
           foto_url: string | null
+          funcao_politica: string | null
           geolocation: unknown
           id: string
           latitude: number | null
@@ -830,6 +831,7 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           foto_url?: string | null
+          funcao_politica?: string | null
           geolocation?: unknown
           id?: string
           latitude?: number | null
@@ -849,6 +851,7 @@ export type Database = {
           endereco?: string | null
           estado?: string | null
           foto_url?: string | null
+          funcao_politica?: string | null
           geolocation?: unknown
           id?: string
           latitude?: number | null

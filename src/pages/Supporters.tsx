@@ -77,8 +77,8 @@ const Supporters = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Apoiadores</h1>
-            <p className="text-sm text-muted-foreground">Gerencie os apoiadores da campanha</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Pessoas</h1>
+            <p className="text-sm text-muted-foreground">Gerencie as pessoas vinculadas à campanha</p>
           </div>
           <Button
             onClick={() => setShowRegisterForm(!showRegisterForm)}
@@ -86,7 +86,7 @@ const Supporters = () => {
             className="gap-2 w-full sm:w-auto"
           >
             <UserPlus className="w-4 h-4" />
-            {showRegisterForm ? "Fechar" : "Cadastrar Apoiador"}
+            {showRegisterForm ? "Fechar" : "Cadastrar Pessoa"}
           </Button>
         </div>
 
@@ -99,7 +99,7 @@ const Supporters = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-bold">{supporters.length}</h3>
-                <p className="text-muted-foreground">Total de apoiadores</p>
+                <p className="text-muted-foreground">Total de pessoas cadastradas</p>
               </div>
             </div>
           </CardContent>
@@ -122,12 +122,12 @@ const Supporters = () => {
             <Card>
               <CardContent className="text-center py-12">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum apoiador encontrado</h3>
+                <h3 className="text-lg font-semibold mb-2">Nenhuma pessoa encontrada</h3>
                 <p className="text-muted-foreground mb-4">
-                  Comece cadastrando apoiadores na campanha
+                  Comece cadastrando pessoas na campanha
                 </p>
                 <Button onClick={() => setShowRegisterForm(true)} variant="campaign">
-                  Cadastrar Primeiro Apoiador
+                  Cadastrar Primeira Pessoa
                 </Button>
               </CardContent>
             </Card>

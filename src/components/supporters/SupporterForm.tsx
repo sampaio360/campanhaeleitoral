@@ -3,11 +3,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+
+const FUNCOES_POLITICAS = [
+  "Vereador(a)",
+  "Presidente de Bairro",
+  "Líder Comunitário",
+  "Coordenador(a) de Campanha",
+  "Cabo Eleitoral",
+  "Assessor(a) Político",
+  "Militante",
+  "Simpatizante",
+  "Outros",
+];
 
 const supporterSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -19,6 +32,7 @@ const supporterSchema = z.object({
   estado: z.string().trim().max(2).optional().or(z.literal("")),
   cep: z.string().trim().max(10).optional().or(z.literal("")),
   cpf: z.string().trim().max(14).optional().or(z.literal("")),
+  funcao_politica: z.string().trim().max(100).optional().or(z.literal("")),
 });
 
 type SupporterFormData = z.infer<typeof supporterSchema>;
@@ -38,6 +52,7 @@ const initialForm: SupporterFormData = {
   estado: "BA",
   cep: "",
   cpf: "",
+  funcao_politica: "",
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
@@ -87,11 +102,12 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         cep: data.cep || null,
         cpf: data.cpf || null,
         foto_url: fotoUrl,
+        funcao_politica: data.funcao_politica || null,
       } as any);
 
       if (error) throw error;
 
-      toast({ title: "Apoiador cadastrado!", description: `${data.nome} foi adicionado com sucesso.` });
+      toast({ title: "Pessoa cadastrada!", description: `${data.nome} foi adicionado(a) com sucesso.` });
       setForm(initialForm);
       setFotoUrl(null);
       onSuccess();
@@ -105,8 +121,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Cadastrar Novo Apoiador</CardTitle>
-        <CardDescription>Preencha os dados do apoiador para registrá-lo na campanha</CardDescription>
+        <CardTitle>Cadastrar Nova Pessoa</CardTitle>
+        <CardDescription>Preencha os dados para registrar na campanha</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -162,6 +178,26 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
               />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
+          </div>
+
+          {/* Função Política */}
+          <div className="space-y-2">
+            <Label htmlFor="funcao_politica">Função Política</Label>
+            <Select
+              value={form.funcao_politica}
+              onValueChange={(value) => handleChange("funcao_politica", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a função política" />
+              </SelectTrigger>
+              <SelectContent>
+                {FUNCOES_POLITICAS.map((funcao) => (
+                  <SelectItem key={funcao} value={funcao}>
+                    {funcao}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* CPF */}

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const modules = [
   { id: "dashboard", title: "Dashboard", icon: BarChart3, route: "/dashboard" },
   { id: "financeiro", title: "Financeiro", icon: DollarSign, route: "/budget", children: ["/budget", "/expenses"] },
-  { id: "supporters", title: "Apoiadores", icon: Users, route: "/supporters" },
+  { id: "pessoas", title: "Pessoas", icon: Users, route: "/supporters" },
   { id: "checkin", title: "Check-in", icon: MapPin, route: "/checkin" },
   { id: "resources", title: "Recursos", icon: Package, route: "/resources" },
   { id: "reports", title: "Relatórios", icon: FileText, route: "/reports" },

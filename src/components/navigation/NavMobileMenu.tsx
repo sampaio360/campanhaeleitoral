@@ -14,7 +14,7 @@ const navItems = [
   { icon: BarChart3, label: "Dashboard", path: "/" },
   { icon: DollarSign, label: "Orçamento", path: "/budget" },
   { icon: Receipt, label: "Despesas", path: "/expenses" },
-  { icon: Users, label: "Apoiadores", path: "/supporters" },
+  { icon: Users, label: "Pessoas", path: "/supporters" },
   { icon: FileText, label: "Relatórios", path: "/reports" },
 ];
 
