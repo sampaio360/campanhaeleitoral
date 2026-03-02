@@ -35,6 +35,7 @@ export function AdminUsers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState(generatePin());
   const [newUserRole, setNewUserRole] = useState<AppRole>("supporter");
   const [newUserCampanha, setNewUserCampanha] = useState<string>("");
@@ -81,7 +82,7 @@ export function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { email: string; name: string; pin: string; role: AppRole; campanha_id?: string }) => {
+    mutationFn: async (userData: { email: string; name: string; password: string; pin: string; role: AppRole; campanha_id?: string }) => {
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: userData,
       });
@@ -108,6 +109,7 @@ export function AdminUsers() {
   const resetForm = () => {
     setNewUserEmail("");
     setNewUserName("");
+    setNewUserPassword("");
     setNewUserPin(generatePin());
     setNewUserRole("supporter");
     setNewUserCampanha("");
@@ -192,6 +194,17 @@ export function AdminUsers() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="password">Senha (mín. 6 caracteres)</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>PIN de Acesso (4 dígitos)</Label>
                 <div className="flex gap-2">
                   <Input
@@ -263,11 +276,12 @@ export function AdminUsers() {
                 onClick={() => createUserMutation.mutate({
                   email: newUserEmail,
                   name: newUserName,
+                  password: newUserPassword,
                   pin: newUserPin,
                   role: newUserRole,
                   campanha_id: newUserCampanha && newUserCampanha !== "none" ? newUserCampanha : undefined
                 })}
-                disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPin.length !== 4}
+                disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPassword.length < 6 || newUserPin.length !== 4}
               >
                 {createUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Criar Usuário
