@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Navbar } from "@/components/Navbar";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -32,9 +33,10 @@ const Admin = () => {
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
-
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => navigate("/modulos")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -106,6 +108,7 @@ const Admin = () => {
           <AdminExternalForm />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 };
