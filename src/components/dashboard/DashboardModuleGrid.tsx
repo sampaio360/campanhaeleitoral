@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Route, MessageCircle, TrendingUp, History } from "lucide-react";
+import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Route, MessageCircle, TrendingUp, History, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardData } from "./useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,12 +32,20 @@ export function DashboardModuleGrid() {
       gradient: "from-green-500 to-emerald-600",
     },
     {
-      id: "supporters",
-      title: "Apoiadores",
+      id: "pessoas",
+      title: "Pessoas",
       icon: Users,
       route: "/supporters",
       stat: loading ? "..." : hasCandidate ? `${stats.supportersCount}` : "Configurar",
       gradient: "from-purple-500 to-violet-600",
+    },
+    {
+      id: "municipios",
+      title: "Municípios",
+      icon: Building2,
+      route: "/municipios",
+      stat: "Gestão territorial",
+      gradient: "from-sky-500 to-blue-600",
     },
     {
       id: "checkin",
