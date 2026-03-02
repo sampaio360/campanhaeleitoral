@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PinGateProps {
   onSuccess: () => void;
@@ -11,6 +13,7 @@ interface PinGateProps {
 
 export const PinGate = ({ onSuccess }: PinGateProps) => {
   const { toast } = useToast();
+  const { profile, user } = useAuth();
   const [pin, setPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -28,7 +31,6 @@ export const PinGate = ({ onSuccess }: PinGateProps) => {
         return;
       }
 
-      // Mark PIN as verified in sessionStorage (resets when tab closes)
       sessionStorage.setItem("pin_verified", "true");
       onSuccess();
     } catch {
@@ -38,6 +40,14 @@ export const PinGate = ({ onSuccess }: PinGateProps) => {
       setIsLoading(false);
     }
   };
+
+  const displayName = profile?.name || user?.email || "";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4">
@@ -51,10 +61,19 @@ export const PinGate = ({ onSuccess }: PinGateProps) => {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Verificação de PIN</CardTitle>
-            <CardDescription>
-              Digite seu PIN de 4 dígitos para continuar
-            </CardDescription>
+            <div className="flex flex-col items-center gap-3 mb-2">
+              <Avatar className="w-14 h-14">
+                <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-lg">{displayName}</CardTitle>
+                <CardDescription>
+                  Digite seu PIN de 4 dígitos para continuar
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
             {isLoading ? (
