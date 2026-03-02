@@ -116,17 +116,10 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
                 <span className="truncate">
                   {activeCampanhaId
                     ? campanhas.find(c => c.id === activeCampanhaId)?.nome || "Campanha"
-                    : "Todas as campanhas"}
+                    : "Selecione uma campanha"}
                 </span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-64 max-h-64 overflow-y-auto">
-                <DropdownMenuItem onClick={() => setSelectedCampanhaId(null)}>
-                  <div className="flex items-center justify-between w-full">
-                    <span>Todas as campanhas</span>
-                    {!activeCampanhaId && <Check className="h-4 w-4 text-primary" />}
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 {campanhas.map((c) => (
                   <DropdownMenuItem key={c.id} onClick={() => setSelectedCampanhaId(c.id)}>
                     <div className="flex items-center justify-between w-full min-w-0">

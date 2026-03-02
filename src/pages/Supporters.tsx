@@ -21,7 +21,8 @@ interface Supporter {
 }
 
 const Supporters = () => {
-  const { user, campanhaId, isMaster } = useAuth();
+  const { user, campanhaId, isMaster, selectedCampanhaId } = useAuth();
+  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
   const { toast } = useToast();
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,10 +30,10 @@ const Supporters = () => {
 
   useEffect(() => {
     fetchSupporters();
-  }, [user, campanhaId]);
+  }, [user, effectiveCampanhaId]);
 
   const fetchSupporters = async () => {
-    if (!user || (!campanhaId && !isMaster)) {
+    if (!user || !effectiveCampanhaId) {
       setLoading(false);
       return;
     }
@@ -42,7 +43,7 @@ const Supporters = () => {
         .from('supporters')
         .select('id, nome, email, telefone, bairro, cidade, created_at')
         .order('created_at', { ascending: false });
-      if (campanhaId) query = query.eq('campanha_id', campanhaId);
+      query = query.eq('campanha_id', effectiveCampanhaId);
       const { data, error } = await query;
 
       if (error) {

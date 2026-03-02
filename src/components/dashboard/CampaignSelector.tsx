@@ -42,7 +42,6 @@ export function CampaignSelector({ value, onChange }: CampaignSelectorProps) {
           <SelectValue placeholder="Todas as campanhas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Todas as campanhas</SelectItem>
           {campanhas.map((c) => (
             <SelectItem key={c.id} value={c.id}>
               {c.nome} {c.partido ? `(${c.partido})` : ""} {c.municipio ? `- ${c.municipio}/${c.uf}` : ""}

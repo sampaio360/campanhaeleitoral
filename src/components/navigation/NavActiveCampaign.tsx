@@ -34,7 +34,7 @@ export function NavActiveCampaign() {
     return (
       <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
         <Building2 className="w-3 h-3" />
-        <span>Todas as campanhas</span>
+        <span>Selecione uma campanha</span>
       </div>
     );
   }

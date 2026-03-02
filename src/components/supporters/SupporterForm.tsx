@@ -56,7 +56,8 @@ const initialForm: SupporterFormData = {
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
-  const { campanhaId, isMaster } = useAuth();
+  const { campanhaId, isMaster, selectedCampanhaId } = useAuth();
+  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
   const { toast } = useToast();
   const [form, setForm] = useState<SupporterFormData>(initialForm);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
@@ -82,8 +83,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
       return;
     }
 
-    if (!campanhaId) {
-      toast({ title: "Erro", description: isMaster ? "Selecione uma campanha primeiro." : "Campanha não identificada.", variant: "destructive" });
+    if (!effectiveCampanhaId) {
+      toast({ title: "Erro", description: "Selecione uma campanha no menu do usuário.", variant: "destructive" });
       return;
     }
 
@@ -91,7 +92,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
     try {
       const data = result.data;
       const { error } = await supabase.from("supporters").insert({
-        campanha_id: campanhaId,
+        campanha_id: effectiveCampanhaId,
         nome: data.nome,
         telefone: data.telefone || null,
         email: data.email || null,
