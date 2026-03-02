@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jwtVerify, createRemoteJWKSet } from "https://deno.land/x/jose@v5.2.0/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,27 +14,30 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Unauthorized - no token' }), { status: 401, headers: corsHeaders });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Verify caller using getUser
-    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: { user: callerUser }, error: userError } = await callerClient.auth.getUser();
+    // Extract user ID from the JWT using the admin client
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Use admin client to get user from token
+    const { data: { user: callerUser }, error: userError } = await adminClient.auth.admin.getUserById(
+      // First decode the JWT to get the sub claim
+      JSON.parse(atob(token.split('.')[1])).sub
+    );
+    
     if (userError || !callerUser) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'Unauthorized - invalid user' }), { status: 401, headers: corsHeaders });
     }
 
     const callerId = callerUser.id;
 
     // Check if caller is master
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: callerRoles } = await adminClient
       .from('user_roles')
       .select('role')
@@ -53,7 +57,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Cannot delete yourself' }), { status: 400, headers: corsHeaders });
     }
 
-    // Delete auth user (cascades to profiles via FK, user_roles, etc.)
+    // Delete auth user
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user_id);
     if (deleteError) {
       return new Response(JSON.stringify({ error: deleteError.message }), { status: 400, headers: corsHeaders });
