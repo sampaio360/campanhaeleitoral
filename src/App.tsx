@@ -26,6 +26,7 @@ import Municipios from "./pages/Municipios";
 import Audit from "./pages/Audit";
 import Install from "./pages/Install";
 import Profile from "./pages/Profile";
+import ExternalRegister from "./pages/ExternalRegister";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/municipios" element={<ProtectedRoute><Municipios /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
             <Route path="/convite/:token" element={<Invite />} />
+            <Route path="/cadastro/:token" element={<ExternalRegister />} />
             <Route path="/install" element={<Install />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

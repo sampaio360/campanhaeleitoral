@@ -275,6 +275,47 @@ export type Database = {
           },
         ]
       }
+      external_form_config: {
+        Row: {
+          campanha_id: string
+          created_at: string
+          enabled: boolean
+          fields: Json
+          id: string
+          mensagem_sucesso: string | null
+          titulo: string | null
+          updated_at: string
+        }
+        Insert: {
+          campanha_id: string
+          created_at?: string
+          enabled?: boolean
+          fields?: Json
+          id?: string
+          mensagem_sucesso?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campanha_id?: string
+          created_at?: string
+          enabled?: boolean
+          fields?: Json
+          id?: string
+          mensagem_sucesso?: string | null
+          titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_form_config_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: true
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invite_links: {
         Row: {
           campanha_id: string
