@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,15 +9,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
-import { MapPin, Plus, Pencil, Trash2, Search, History } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MapPin, Plus, Pencil, Trash2, Search, CalendarDays, Vote } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIBGEMunicipios, fetchPopulacao } from "@/hooks/useIBGEMunicipios";
-import { MunicipioVotingHistory } from "@/components/municipios/MunicipioVotingHistory";
+import { EleicoesTab } from "@/components/municipios/EleicoesTab";
+import { HistoricoVotacaoTab } from "@/components/municipios/HistoricoVotacaoTab";
 
 const ESTADOS_BR = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -32,13 +33,8 @@ const PRIORIDADES = [
 ];
 
 interface MunicipioForm {
-  nome: string;
-  estado: string;
-  populacao: string;
-  meta_votos: string;
-  status: string;
-  prioridade: string;
-  notes: string;
+  nome: string; estado: string; populacao: string;
+  meta_votos: string; status: string; prioridade: string; notes: string;
 }
 
 const emptyForm: MunicipioForm = {
@@ -52,7 +48,6 @@ const Municipios = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [historyMunicipio, setHistoryMunicipio] = useState<{ id: string; nome: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MunicipioForm>(emptyForm);
   const [searchTable, setSearchTable] = useState("");
@@ -85,10 +80,7 @@ const Municipios = () => {
     queryFn: async () => {
       if (!activeCampanhaId) return [];
       const { data, error } = await supabase
-        .from("municipios")
-        .select("*")
-        .eq("campanha_id", activeCampanhaId)
-        .order("nome");
+        .from("municipios").select("*").eq("campanha_id", activeCampanhaId).order("nome");
       if (error) throw error;
       return data;
     },
@@ -99,15 +91,11 @@ const Municipios = () => {
     mutationFn: async () => {
       if (!activeCampanhaId) throw new Error("Sem campanha ativa");
       const payload = {
-        campanha_id: activeCampanhaId,
-        nome: form.nome.trim(),
-        estado: form.estado,
+        campanha_id: activeCampanhaId, nome: form.nome.trim(), estado: form.estado,
         populacao: form.populacao ? parseInt(form.populacao) : null,
         meta_votos: form.meta_votos ? parseInt(form.meta_votos) : null,
-        status: form.status,
-        prioridade: form.prioridade,
-        notes: form.notes || null,
-        updated_at: new Date().toISOString(),
+        status: form.status, prioridade: form.prioridade,
+        notes: form.notes || null, updated_at: new Date().toISOString(),
       };
       if (editingId) {
         const { error } = await supabase.from("municipios").update(payload).eq("id", editingId);
@@ -143,26 +131,18 @@ const Municipios = () => {
   });
 
   const closeDialog = () => {
-    setDialogOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
-    ibge.setQuery("");
-    ibge.close();
+    setDialogOpen(false); setEditingId(null); setForm(emptyForm);
+    ibge.setQuery(""); ibge.close();
   };
 
   const openEdit = (m: any) => {
     setEditingId(m.id);
     setForm({
-      nome: m.nome,
-      estado: m.estado,
-      populacao: m.populacao?.toString() || "",
-      meta_votos: m.meta_votos?.toString() || "",
-      status: m.status,
-      prioridade: m.prioridade || "media",
-      notes: m.notes || "",
+      nome: m.nome, estado: m.estado,
+      populacao: m.populacao?.toString() || "", meta_votos: m.meta_votos?.toString() || "",
+      status: m.status, prioridade: m.prioridade || "media", notes: m.notes || "",
     });
-    ibge.setQuery(m.nome);
-    setDialogOpen(true);
+    ibge.setQuery(m.nome); setDialogOpen(true);
   };
 
   const filtered = municipios?.filter(m =>
@@ -191,216 +171,184 @@ const Municipios = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Municípios</h1>
-            <p className="text-sm text-muted-foreground">Gerencie os municípios da campanha</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => { setEditingId(null); setForm(emptyForm); ibge.setQuery(""); }}>
-                <Plus className="w-4 h-4 mr-2" /> Novo Município
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>{editingId ? "Editar Município" : "Novo Município"}</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Nome com autocomplete IBGE */}
-                  <div className="space-y-2 relative">
-                    <Label htmlFor="nome">Nome *</Label>
-                    <Input
-                      id="nome"
-                      ref={inputRef}
-                      value={ibge.query}
-                      onChange={e => {
-                        ibge.setQuery(e.target.value);
-                        setForm(f => ({ ...f, nome: e.target.value }));
-                      }}
-                      placeholder="Digite o nome da cidade"
-                      autoComplete="off"
-                      required
-                    />
-                    {ibge.isOpen && (
-                      <div
-                        ref={suggestionsRef}
-                        className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto"
-                      >
-                        {ibge.suggestions.map((s) => (
-                          <button
-                            key={s.id}
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                            onClick={() => handleSelectMunicipio(s)}
-                          >
-                            {s.nome} <span className="text-muted-foreground">— {s.uf}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Estado */}
-                  <div className="space-y-2">
-                    <Label htmlFor="estado">Estado *</Label>
-                    <Select value={form.estado} onValueChange={v => setForm(f => ({ ...f, estado: v }))}>
-                      <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                      <SelectContent>
-                        {ESTADOS_BR.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* População */}
-                  <div className="space-y-2">
-                    <Label htmlFor="populacao">População</Label>
-                    <Input id="populacao" type="number" value={form.populacao} onChange={e => setForm(f => ({ ...f, populacao: e.target.value }))} />
-                  </div>
-
-                  {/* Meta de Votos */}
-                  <div className="space-y-2">
-                    <Label htmlFor="meta_votos">Meta de Votos</Label>
-                    <Input id="meta_votos" type="number" value={form.meta_votos} onChange={e => setForm(f => ({ ...f, meta_votos: e.target.value }))} />
-                  </div>
-
-                  {/* Status */}
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="inativo">Inativo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Prioridade */}
-                  <div className="space-y-2">
-                    <Label htmlFor="prioridade">Prioridade</Label>
-                    <Select value={form.prioridade} onValueChange={v => setForm(f => ({ ...f, prioridade: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {PRIORIDADES.map(p => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Textarea id="notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3} />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={closeDialog}>Cancelar</Button>
-                  <Button type="submit" disabled={saveMutation.isPending || !form.nome || !form.estado}>
-                    {saveMutation.isPending ? "Salvando..." : "Salvar"}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold">Municípios</h1>
+          <p className="text-sm text-muted-foreground">Gerencie municípios, eleições e histórico de votação</p>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar município..."
-                value={searchTable}
-                onChange={e => setSearchTable(e.target.value)}
-                className="max-w-xs"
-              />
-              <span className="text-sm text-muted-foreground ml-auto">
-                {filtered.length} município(s)
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-6 space-y-3">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-12">
-                <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Nenhum município cadastrado.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Município</TableHead>
-                      <TableHead>UF</TableHead>
-                      <TableHead className="hidden sm:table-cell">População</TableHead>
-                      <TableHead className="hidden md:table-cell">Meta Votos</TableHead>
-                      <TableHead>Prioridade</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map(m => (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">{m.nome}</TableCell>
-                        <TableCell>{m.estado}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {m.populacao?.toLocaleString("pt-BR") || "—"}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {m.meta_votos?.toLocaleString("pt-BR") || "—"}
-                        </TableCell>
-                        <TableCell>{getPrioridadeBadge(m.prioridade || "media")}</TableCell>
-                        <TableCell>
-                          <Badge variant={m.status === "ativo" ? "secondary" : "outline"}>
-                            {m.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="outline" size="sm" title="Histórico de Votação"
-                              className="gap-1 text-xs"
-                              onClick={() => setHistoryMunicipio({ id: m.id, nome: m.nome })}>
-                              <History className="w-4 h-4" />
-                              <span className="hidden lg:inline">Votação</span>
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              if (confirm("Remover este município?")) deleteMutation.mutate(m.id);
-                            }}>
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <Tabs defaultValue="municipios" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="municipios" className="gap-2">
+              <MapPin className="w-4 h-4" /> Municípios
+            </TabsTrigger>
+            <TabsTrigger value="eleicoes" className="gap-2">
+              <CalendarDays className="w-4 h-4" /> Eleições
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="gap-2">
+              <Vote className="w-4 h-4" /> Histórico
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Voting History Dialog */}
-      {historyMunicipio && activeCampanhaId && (
-        <MunicipioVotingHistory
-          municipioId={historyMunicipio.id}
-          municipioNome={historyMunicipio.nome}
-          campanhaId={activeCampanhaId}
-          open={!!historyMunicipio}
-          onClose={() => setHistoryMunicipio(null)}
-        />
-      )}
+          {/* ── Municípios Tab ── */}
+          <TabsContent value="municipios">
+            <div className="flex justify-end mb-4">
+              <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => { setEditingId(null); setForm(emptyForm); ibge.setQuery(""); }}>
+                    <Plus className="w-4 h-4 mr-2" /> Novo Município
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>{editingId ? "Editar Município" : "Novo Município"}</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2 relative">
+                        <Label htmlFor="nome">Nome *</Label>
+                        <Input id="nome" ref={inputRef} value={ibge.query}
+                          onChange={e => { ibge.setQuery(e.target.value); setForm(f => ({ ...f, nome: e.target.value })); }}
+                          placeholder="Digite o nome da cidade" autoComplete="off" required />
+                        {ibge.isOpen && (
+                          <div ref={suggestionsRef}
+                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
+                            {ibge.suggestions.map((s) => (
+                              <button key={s.id} type="button"
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                onClick={() => handleSelectMunicipio(s)}>
+                                {s.nome} <span className="text-muted-foreground">— {s.uf}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Estado *</Label>
+                        <Select value={form.estado} onValueChange={v => setForm(f => ({ ...f, estado: v }))}>
+                          <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                          <SelectContent>
+                            {ESTADOS_BR.map(uf => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>População</Label>
+                        <Input type="number" value={form.populacao} onChange={e => setForm(f => ({ ...f, populacao: e.target.value }))} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Meta de Votos</Label>
+                        <Input type="number" value={form.meta_votos} onChange={e => setForm(f => ({ ...f, meta_votos: e.target.value }))} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ativo">Ativo</SelectItem>
+                            <SelectItem value="inativo">Inativo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Prioridade</Label>
+                        <Select value={form.prioridade} onValueChange={v => setForm(f => ({ ...f, prioridade: v }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PRIORIDADES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Observações</Label>
+                      <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3} />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={closeDialog}>Cancelar</Button>
+                      <Button type="submit" disabled={saveMutation.isPending || !form.nome || !form.estado}>
+                        {saveMutation.isPending ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-muted-foreground" />
+                  <Input placeholder="Buscar município..." value={searchTable}
+                    onChange={e => setSearchTable(e.target.value)} className="max-w-xs" />
+                  <span className="text-sm text-muted-foreground ml-auto">{filtered.length} município(s)</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-6 space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhum município cadastrado.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Município</TableHead>
+                          <TableHead>UF</TableHead>
+                          <TableHead className="hidden sm:table-cell">População</TableHead>
+                          <TableHead className="hidden md:table-cell">Meta Votos</TableHead>
+                          <TableHead>Prioridade</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filtered.map(m => (
+                          <TableRow key={m.id}>
+                            <TableCell className="font-medium">{m.nome}</TableCell>
+                            <TableCell>{m.estado}</TableCell>
+                            <TableCell className="hidden sm:table-cell">{m.populacao?.toLocaleString("pt-BR") || "—"}</TableCell>
+                            <TableCell className="hidden md:table-cell">{m.meta_votos?.toLocaleString("pt-BR") || "—"}</TableCell>
+                            <TableCell>{getPrioridadeBadge(m.prioridade || "media")}</TableCell>
+                            <TableCell>
+                              <Badge variant={m.status === "ativo" ? "secondary" : "outline"}>{m.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => {
+                                  if (confirm("Remover este município?")) deleteMutation.mutate(m.id);
+                                }}>
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── Eleições Tab ── */}
+          <TabsContent value="eleicoes">
+            <EleicoesTab campanhaId={activeCampanhaId} />
+          </TabsContent>
+
+          {/* ── Histórico Tab ── */}
+          <TabsContent value="historico">
+            <HistoricoVotacaoTab campanhaId={activeCampanhaId} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
