@@ -109,7 +109,7 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
       setRua("");
 
       // Focus next field
-      setTimeout(() => bairroRef.current?.focus(), 100);
+      setTimeout(() => ruaRef.current?.focus(), 100);
     });
 
     cidadeAutoRef.current = ac;
@@ -202,7 +202,7 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
     <Card className="mb-6">
       <CardHeader>
         <CardTitle>Cadastrar Nova Rua</CardTitle>
-        <CardDescription>Selecione cidade → bairro → rua usando autocomplete do Google</CardDescription>
+        <CardDescription>Selecione cidade → rua (o bairro é preenchido automaticamente)</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -216,16 +216,6 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
             />
           </div>
           <div className="space-y-2">
-            <Label>Bairro {!cidadeLocation && <span className="text-xs text-muted-foreground">(escolha a cidade primeiro)</span>}</Label>
-            <Input
-              ref={bairroRef}
-              value={bairro}
-              onChange={(e) => setBairro(e.target.value)}
-              placeholder={cidadeLocation ? "Digite o bairro..." : "Aguardando cidade..."}
-              disabled={!cidadeLocation}
-            />
-          </div>
-          <div className="space-y-2">
             <Label>Rua * {!cidadeLocation && <span className="text-xs text-muted-foreground">(escolha a cidade primeiro)</span>}</Label>
             <Input
               ref={ruaRef}
@@ -233,6 +223,16 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
               onChange={(e) => setRua(e.target.value)}
               placeholder={cidadeLocation ? "Digite a rua..." : "Aguardando cidade..."}
               disabled={!cidadeLocation}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Bairro <span className="text-xs text-muted-foreground">(automático)</span></Label>
+            <Input
+              ref={bairroRef}
+              value={bairro}
+              onChange={(e) => setBairro(e.target.value)}
+              placeholder={bairro ? bairro : "Preenchido ao selecionar a rua"}
+              className="bg-muted/50"
             />
           </div>
         </div>
