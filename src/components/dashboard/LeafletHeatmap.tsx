@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.heat";
 
 interface SupporterPoint {
   latitude: number | null;
@@ -48,53 +49,66 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
       maxZoom: 18,
     }).addTo(map);
 
-    // Custom icon
-    const icon = L.divIcon({
-      className: "custom-marker",
-      html: `<div style="width:12px;height:12px;border-radius:50%;background:hsl(0 72% 50%);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3)"></div>`,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-    });
+    if (validPoints.length > 0) {
+      // Group by location for intensity
+      const locationMap = new Map<string, { count: number; lat: number; lng: number; label: string }>();
+      validPoints.forEach((p) => {
+        const key = `${p.latitude!.toFixed(4)},${p.longitude!.toFixed(4)}`;
+        const existing = locationMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          locationMap.set(key, {
+            count: 1,
+            lat: p.latitude!,
+            lng: p.longitude!,
+            label: [p.bairro, p.cidade].filter(Boolean).join(", ") || p.nome,
+          });
+        }
+      });
 
-    // Group by location for clustering info
-    const locationMap = new Map<string, { count: number; lat: number; lng: number; label: string }>();
-    validPoints.forEach((p) => {
-      const key = `${p.latitude!.toFixed(4)},${p.longitude!.toFixed(4)}`;
-      const existing = locationMap.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        locationMap.set(key, {
-          count: 1,
-          lat: p.latitude!,
-          lng: p.longitude!,
-          label: [p.bairro, p.cidade].filter(Boolean).join(", ") || p.nome,
-        });
+      // Real thermal heatmap layer
+      const heatPoints: [number, number, number][] = [];
+      locationMap.forEach((loc) => {
+        heatPoints.push([loc.lat, loc.lng, loc.count]);
+      });
+
+      const maxIntensity = Math.max(...heatPoints.map((p) => p[2]), 1);
+
+      L.heatLayer(heatPoints, {
+        radius: 30,
+        blur: 20,
+        maxZoom: 16,
+        max: maxIntensity,
+        gradient: {
+          0.2: "#2196F3",  // blue
+          0.4: "#4CAF50",  // green
+          0.6: "#FFEB3B",  // yellow
+          0.8: "#FF9800",  // orange
+          1.0: "#F44336",  // red
+        },
+      }).addTo(map);
+
+      // Also add small circle markers with popups for interactivity
+      locationMap.forEach((loc) => {
+        L.circleMarker([loc.lat, loc.lng], {
+          radius: 4,
+          fillColor: "transparent",
+          color: "transparent",
+          weight: 0,
+          fillOpacity: 0,
+        })
+          .bindPopup(`<strong>${loc.label}</strong><br/>${loc.count} apoiador${loc.count > 1 ? "es" : ""}`)
+          .addTo(map);
+      });
+
+      // Fit bounds
+      if (validPoints.length > 1) {
+        const bounds = L.latLngBounds(
+          validPoints.map((p) => [p.latitude!, p.longitude!] as L.LatLngExpression)
+        );
+        map.fitBounds(bounds, { padding: [30, 30] });
       }
-    });
-
-    locationMap.forEach((loc) => {
-      const size = Math.min(8 + loc.count * 3, 30);
-      const opacity = Math.min(0.4 + loc.count * 0.1, 0.9);
-      
-      L.circleMarker([loc.lat, loc.lng], {
-        radius: size,
-        fillColor: "hsl(0, 72%, 50%)",
-        color: "white",
-        weight: 2,
-        opacity: 1,
-        fillOpacity: opacity,
-      })
-        .bindPopup(`<strong>${loc.label}</strong><br/>${loc.count} apoiador${loc.count > 1 ? "es" : ""}`)
-        .addTo(map);
-    });
-
-    // Fit bounds if we have points
-    if (validPoints.length > 1) {
-      const bounds = L.latLngBounds(
-        validPoints.map((p) => [p.latitude!, p.longitude!] as L.LatLngExpression)
-      );
-      map.fitBounds(bounds, { padding: [30, 30] });
     }
 
     return () => {
@@ -132,6 +146,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <MapPin className="w-10 h-10 mb-2 opacity-40" />
             <p className="text-sm">Nenhum apoiador com geolocalização cadastrado.</p>
+            <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
           </div>
         ) : (
           <div ref={mapRef} className="h-80 rounded-lg overflow-hidden" />

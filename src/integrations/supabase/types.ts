@@ -875,6 +875,8 @@ export type Database = {
           created_at: string
           estado: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           nome: string
           status_cobertura: Database["public"]["Enums"]["status_cobertura_type"]
         }
@@ -886,6 +888,8 @@ export type Database = {
           created_at?: string
           estado?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome: string
           status_cobertura?: Database["public"]["Enums"]["status_cobertura_type"]
         }
@@ -897,6 +901,8 @@ export type Database = {
           created_at?: string
           estado?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           nome?: string
           status_cobertura?: Database["public"]["Enums"]["status_cobertura_type"]
         }

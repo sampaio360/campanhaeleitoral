@@ -9,6 +9,7 @@ import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { geocodeAddress } from "@/lib/geocode";
 import { z } from "zod";
 
 const FUNCOES_POLITICAS = [
@@ -94,6 +95,16 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
     setSaving(true);
     try {
       const data = result.data;
+
+      // Geocode address automatically
+      const coords = await geocodeAddress({
+        endereco: data.endereco,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        estado: data.estado,
+        cep: data.cep,
+      });
+
       const { error } = await supabase.from("supporters").insert({
         campanha_id: effectiveCampanhaId,
         nome: data.nome,
@@ -108,6 +119,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         foto_url: fotoUrl,
         funcao_politica: data.funcao_politica || null,
         observacao: data.observacao || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
       } as any);
 
       if (error) throw error;

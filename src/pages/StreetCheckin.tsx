@@ -204,7 +204,7 @@ const StreetCheckin = () => {
     setSubmittingFeedback(false);
   };
 
-  const handleAddStreet = async (data: { nome: string; bairro: string; cidade: string }) => {
+  const handleAddStreet = async (data: { nome: string; bairro: string; cidade: string; latitude?: number; longitude?: number }) => {
     if (!data.nome || !campanhaId) return;
     setCreating(true);
     const { error } = await supabase.from("streets").insert({
@@ -212,7 +212,9 @@ const StreetCheckin = () => {
       nome: data.nome,
       bairro: data.bairro || null,
       cidade: data.cidade || null,
-    });
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+    } as any);
 
     if (error) {
       if (error.code === '23505') {

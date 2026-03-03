@@ -49,7 +49,7 @@ function ensurePacStyles() {
 interface CascadingAddressFormProps {
   visible: boolean;
   creating: boolean;
-  onSubmit: (data: { nome: string; bairro: string; cidade: string }) => void;
+  onSubmit: (data: { nome: string; bairro: string; cidade: string; latitude?: number; longitude?: number }) => void;
   onCancel: () => void;
 }
 
@@ -59,6 +59,7 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
   const [bairro, setBairro] = useState("");
   const [rua, setRua] = useState("");
   const [cidadeLocation, setCidadeLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [ruaLocation, setRuaLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const cidadeRef = useRef<HTMLInputElement>(null);
   const bairroRef = useRef<HTMLInputElement>(null);
@@ -138,7 +139,7 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
     const ac = new window.google.maps.places.Autocomplete(ruaRef.current, {
       types: ["address"],
       componentRestrictions: { country: "br" },
-      fields: ["address_components"],
+      fields: ["address_components", "geometry"],
     });
     ac.setBounds(circle.getBounds());
 
@@ -152,6 +153,14 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
       const streetName = `${get("route")}${get("street_number") ? `, ${get("street_number")}` : ""}`.trim();
       setRua(streetName);
 
+      // Save street coordinates
+      if (place.geometry?.location) {
+        setRuaLocation({
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        });
+      }
+
       // Also fill bairro if empty
       if (!bairro) {
         const b = get("sublocality_level_1") || get("sublocality") || get("neighborhood");
@@ -164,7 +173,13 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
 
   const handleSubmit = () => {
     if (!rua) return;
-    onSubmit({ nome: rua, bairro, cidade });
+    onSubmit({
+      nome: rua,
+      bairro,
+      cidade,
+      latitude: ruaLocation?.lat ?? cidadeLocation?.lat,
+      longitude: ruaLocation?.lng ?? cidadeLocation?.lng,
+    });
   };
 
   // Reset when hidden
@@ -174,6 +189,7 @@ export function CascadingAddressForm({ visible, creating, onSubmit, onCancel }: 
       setBairro("");
       setRua("");
       setCidadeLocation(null);
+      setRuaLocation(null);
       cidadeAutoRef.current = null;
       bairroAutoRef.current = null;
       ruaAutoRef.current = null;
