@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { enqueueOffline } from "@/lib/offlineSync";
-import { useGooglePlaces } from "@/hooks/useGooglePlaces";
+import { CascadingAddressForm } from "@/components/checkin/CascadingAddressForm";
 import { MapPin, Play, Square, Plus, Search, Loader2, MessageSquare, Camera } from "lucide-react";
 
 
@@ -57,22 +57,7 @@ const StreetCheckin = () => {
   const [notes, setNotes] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddStreet, setShowAddStreet] = useState(false);
-  const [newStreet, setNewStreet] = useState({ nome: "", bairro: "", cidade: "" });
   const [creating, setCreating] = useState(false);
-  const streetInputRef = useRef<HTMLInputElement>(null);
-
-  const { ready: placesReady, setOnSelect } = useGooglePlaces(streetInputRef, showAddStreet);
-
-  useEffect(() => {
-    setOnSelect((place) => {
-      console.log("Google Places result:", place);
-      setNewStreet({
-        nome: place.nome || "",
-        bairro: place.bairro || "",
-        cidade: place.cidade || "",
-      });
-    });
-  }, [setOnSelect]);
 
   // Feedback dialog state
   const [feedbackDialog, setFeedbackDialog] = useState<{ open: boolean; checkinId: string }>({ open: false, checkinId: "" });
@@ -219,14 +204,14 @@ const StreetCheckin = () => {
     setSubmittingFeedback(false);
   };
 
-  const handleAddStreet = async () => {
-    if (!newStreet.nome || !campanhaId) return;
+  const handleAddStreet = async (data: { nome: string; bairro: string; cidade: string }) => {
+    if (!data.nome || !campanhaId) return;
     setCreating(true);
     const { error } = await supabase.from("streets").insert({
       campanha_id: campanhaId,
-      nome: newStreet.nome,
-      bairro: newStreet.bairro || null,
-      cidade: newStreet.cidade || null,
+      nome: data.nome,
+      bairro: data.bairro || null,
+      cidade: data.cidade || null,
     });
 
     if (error) {
@@ -237,7 +222,6 @@ const StreetCheckin = () => {
       }
     } else {
       toast({ title: "Rua cadastrada!" });
-      setNewStreet({ nome: "", bairro: "", cidade: "" });
       setShowAddStreet(false);
       fetchData();
     }
@@ -280,37 +264,12 @@ const StreetCheckin = () => {
           </Button>
         </div>
 
-        {showAddStreet && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Cadastrar Nova Rua</CardTitle>
-              <CardDescription>Evite cadastrar ruas duplicadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Nome da Rua * {placesReady && <span className="text-xs text-muted-foreground">(com autocomplete)</span>}</Label>
-                  <Input ref={streetInputRef} value={newStreet.nome} onChange={(e) => setNewStreet((p) => ({ ...p, nome: e.target.value }))} placeholder="Digite o endereço..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Bairro</Label>
-                  <Input value={newStreet.bairro} onChange={(e) => setNewStreet((p) => ({ ...p, bairro: e.target.value }))} placeholder="Centro" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cidade</Label>
-                  <Input value={newStreet.cidade} onChange={(e) => setNewStreet((p) => ({ ...p, cidade: e.target.value }))} placeholder="Sua Cidade" />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <Button onClick={handleAddStreet} disabled={!newStreet.nome || creating}>
-                  {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Cadastrar
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddStreet(false)}>Cancelar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <CascadingAddressForm
+          visible={showAddStreet}
+          creating={creating}
+          onSubmit={handleAddStreet}
+          onCancel={() => setShowAddStreet(false)}
+        />
 
         {activeCheckinsList.length > 0 && (
           <Card className="mb-6 border-green-500/50 shadow-sm">
