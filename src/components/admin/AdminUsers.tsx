@@ -46,6 +46,38 @@ export function AdminUsers() {
   const { isMaster } = useAuth();
   const queryClient = useQueryClient();
 
+  const { user: authUser, campanhaId } = useAuth();
+
+  // Fetch admin's campaigns (profile + user_campanhas)
+  const { data: adminCampaignIds } = useQuery({
+    queryKey: ['admin-my-campanhas', authUser?.id],
+    queryFn: async () => {
+      if (!authUser?.id) return [];
+      const { data, error } = await supabase
+        .from('user_campanhas')
+        .select('campanha_id')
+        .eq('user_id', authUser.id);
+      if (error) throw error;
+      const ids = new Set(data?.map(r => r.campanha_id) || []);
+      if (campanhaId) ids.add(campanhaId);
+      return Array.from(ids);
+    },
+    enabled: !!authUser?.id && !isMaster,
+  });
+
+  // Fetch all user_campanhas for cross-reference (only for non-master)
+  const { data: allUserCampanhas } = useQuery({
+    queryKey: ['admin-all-user-campanhas'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_campanhas')
+        .select('user_id, campanha_id');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !isMaster && !!adminCampaignIds?.length,
+  });
+
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
@@ -70,6 +102,21 @@ export function AdminUsers() {
       return usersWithRoles;
     }
   });
+
+  // Filter users: master sees all, admin sees only users from their campaigns
+  const filteredUsers = (() => {
+    if (!users) return [];
+    if (isMaster) return users;
+    if (!adminCampaignIds?.length) return [];
+    const adminCampSet = new Set(adminCampaignIds);
+    return users.filter(u => {
+      // Check profile campanha_id
+      if (u.campanha_id && adminCampSet.has(u.campanha_id)) return true;
+      // Check user_campanhas cross-reference
+      if (allUserCampanhas?.some(uc => uc.user_id === u.id && adminCampSet.has(uc.campanha_id))) return true;
+      return false;
+    });
+  })();
 
   const { data: campanhas } = useQuery({
     queryKey: ['admin-campanhas-list'],
@@ -330,7 +377,7 @@ export function AdminUsers() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.map((user) => (
+            {filteredUsers?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell className="text-muted-foreground">{user.email || '—'}</TableCell>
@@ -403,7 +450,7 @@ export function AdminUsers() {
             ))}
           </TableBody>
         </Table>
-        {users?.length === 0 && (
+        {filteredUsers?.length === 0 && (
           <p className="text-center text-muted-foreground py-8">
             Nenhum usuário encontrado
           </p>
