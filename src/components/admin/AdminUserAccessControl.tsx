@@ -4,13 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserCog, ChevronRight, Minus } from "lucide-react";
+import { Loader2, UserCog, ChevronRight, AlertTriangle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ROUTE_REGISTRY, RouteEntry } from "@/lib/routeRegistry";
 import { cn } from "@/lib/utils";
 
+// --- Types ---
 interface UserAccessRow {
   id: string;
   user_id: string;
@@ -22,8 +23,64 @@ interface ProfileOption {
   id: string;
   name: string;
   email: string | null;
+  parent_id: string | null;
 }
 
+interface AccessControlRow {
+  role: string;
+  route: string;
+  allowed: boolean;
+}
+
+// Default denials (mirrors useAccessControl.ts)
+const DEFAULT_DENIED: Record<string, string[]> = {
+  supporter: ['/budget', '/expenses', '/settings', '/admin', '/roi'],
+  political_leader: ['/settings', '/admin', '/roi'],
+  local_coordinator: ['/admin', '/roi'],
+};
+
+// --- Helper: resolve effective access for a user ---
+function resolveEffectiveAccess(
+  route: string,
+  userRules: UserAccessRow[],
+  roleRules: AccessControlRow[],
+  userRoles: string[],
+  isMaster: boolean,
+): boolean {
+  if (isMaster) return true;
+
+  const normalized = '/' + route.split('/').filter(Boolean)[0];
+
+  // User-level override
+  const userRule = userRules.find(r => r.route === route || r.route === normalized);
+  if (userRule) return userRule.allowed;
+
+  // Role-based rules
+  if (roleRules.length > 0) {
+    for (const role of userRoles) {
+      const rule = roleRules.find(r => r.role === role && (r.route === route || r.route === normalized));
+      if (rule) {
+        if (rule.allowed) return true;
+        continue;
+      }
+      const denied = DEFAULT_DENIED[role];
+      if (!denied || !denied.includes(normalized)) return true;
+    }
+    return userRoles.some(role => {
+      const rule = roleRules.find(r => r.role === role && (r.route === route || r.route === normalized));
+      return rule?.allowed;
+    });
+  }
+
+  // No rules — default denials
+  for (const role of userRoles) {
+    const denied = DEFAULT_DENIED[role];
+    if (!denied || !denied.includes(normalized)) return true;
+  }
+  return false;
+}
+
+// --- Main Component ---
 export function AdminUserAccessControl() {
   const { selectedCampanhaId, campanhaId } = useAuth();
   const effectiveCampanhaId = selectedCampanhaId || campanhaId;
@@ -31,15 +88,14 @@ export function AdminUserAccessControl() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [openModules, setOpenModules] = useState<Set<string>>(new Set());
 
-  // Fetch users linked to this campaign
+  // Fetch users with parent_id
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['campaign-users-for-access', effectiveCampanhaId],
     queryFn: async () => {
       if (!effectiveCampanhaId) return [];
-      // Get users from profiles + user_campanhas
       const { data: profileUsers } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, parent_id')
         .eq('campanha_id', effectiveCampanhaId);
 
       const { data: campanhaLinks } = await supabase
@@ -57,7 +113,7 @@ export function AdminUserAccessControl() {
         if (missingIds.length > 0) {
           const { data: extra } = await supabase
             .from('profiles')
-            .select('id, name, email')
+            .select('id, name, email, parent_id')
             .in('id', missingIds);
           (extra || []).forEach(p => profileMap.set(p.id, p));
         }
@@ -68,7 +124,10 @@ export function AdminUserAccessControl() {
     enabled: !!effectiveCampanhaId,
   });
 
-  // Fetch user access rules
+  const selectedUser = useMemo(() => users?.find(u => u.id === selectedUserId), [users, selectedUserId]);
+  const parentId = selectedUser?.parent_id || null;
+
+  // Fetch selected user's access rules
   const { data: userRules, isLoading: rulesLoading } = useQuery({
     queryKey: ['user-access-control-admin', effectiveCampanhaId, selectedUserId],
     queryFn: async () => {
@@ -83,6 +142,66 @@ export function AdminUserAccessControl() {
     },
     enabled: !!effectiveCampanhaId && !!selectedUserId,
   });
+
+  // Fetch parent's user-level overrides
+  const { data: parentUserRules } = useQuery({
+    queryKey: ['user-access-control-admin', effectiveCampanhaId, parentId],
+    queryFn: async () => {
+      if (!effectiveCampanhaId || !parentId) return [];
+      const { data, error } = await supabase
+        .from('user_access_control')
+        .select('id, user_id, route, allowed')
+        .eq('campanha_id', effectiveCampanhaId)
+        .eq('user_id', parentId);
+      if (error) throw error;
+      return (data || []) as UserAccessRow[];
+    },
+    enabled: !!effectiveCampanhaId && !!parentId,
+  });
+
+  // Fetch parent's roles
+  const { data: parentRolesData } = useQuery({
+    queryKey: ['parent-roles', parentId],
+    queryFn: async () => {
+      if (!parentId) return [];
+      const { data } = await supabase.from('user_roles').select('role').eq('user_id', parentId);
+      return (data || []).map(r => r.role);
+    },
+    enabled: !!parentId,
+  });
+
+  // Fetch role-based access_control rules for the campaign
+  const { data: roleRules } = useQuery({
+    queryKey: ['access-control-rules', effectiveCampanhaId],
+    queryFn: async () => {
+      if (!effectiveCampanhaId) return [];
+      const { data, error } = await supabase
+        .from('access_control')
+        .select('role, route, allowed')
+        .eq('campanha_id', effectiveCampanhaId);
+      if (error) throw error;
+      return (data || []) as AccessControlRow[];
+    },
+    enabled: !!effectiveCampanhaId,
+  });
+
+  // Check if parent has access to a given route
+  const parentHasAccess = (route: string): boolean | null => {
+    if (!parentId || !parentRolesData) return null; // no parent or data not loaded
+    const parentIsMaster = parentRolesData.includes('master');
+    return resolveEffectiveAccess(
+      route,
+      parentUserRules || [],
+      roleRules || [],
+      parentRolesData,
+      parentIsMaster,
+    );
+  };
+
+  const parentName = useMemo(() => {
+    if (!parentId || !users) return null;
+    return users.find(u => u.id === parentId)?.name || 'Líder';
+  }, [parentId, users]);
 
   const upsertMutation = useMutation({
     mutationFn: async ({ route, allowed }: { route: string; allowed: boolean }) => {
@@ -118,16 +237,6 @@ export function AdminUserAccessControl() {
     },
   });
 
-  const allRoutes = useMemo(() => {
-    const set = new Set<string>();
-    ROUTE_REGISTRY.forEach(mod => {
-      set.add(mod.route);
-      mod.children?.forEach(child => set.add(child.route));
-    });
-    return Array.from(set);
-  }, []);
-
-  // Three states: undefined (inherit), true (allowed), false (blocked)
   const getUserRule = (route: string): boolean | undefined => {
     if (!userRules) return undefined;
     const rule = userRules.find(r => r.route === route);
@@ -137,13 +246,10 @@ export function AdminUserAccessControl() {
   const cycleAccess = (route: string) => {
     const current = getUserRule(route);
     if (current === undefined) {
-      // No rule -> set to blocked
       upsertMutation.mutate({ route, allowed: false });
     } else if (current === false) {
-      // Blocked -> set to allowed
       upsertMutation.mutate({ route, allowed: true });
     } else {
-      // Allowed -> remove (inherit)
       deleteMutation.mutate({ route });
     }
   };
@@ -173,6 +279,29 @@ export function AdminUserAccessControl() {
     return <Badge variant="destructive" className="text-[10px]">Bloqueado</Badge>;
   };
 
+  const renderHierarchyWarning = (route: string) => {
+    const status = getUserRule(route);
+    if (status !== true) return null; // only warn when explicitly allowing
+
+    const parentAccess = parentHasAccess(route);
+    if (parentAccess === null || parentAccess === true) return null; // no parent or parent has access
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <AlertTriangle className="w-4 h-4 text-amber-500 inline-block ml-1" />
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[250px]">
+            <p className="text-xs">
+              Atenção: o líder <strong>{parentName}</strong> não tem acesso a esta rota. Este usuário terá mais permissão que seu superior.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   const renderRouteRow = (entry: RouteEntry, indent = false) => {
     const status = getUserRule(entry.route);
     return (
@@ -182,7 +311,10 @@ export function AdminUserAccessControl() {
           <span className="ml-2 text-xs text-muted-foreground">{entry.route}</span>
         </td>
         <td className="py-2 px-3 text-center border-b border-border">
-          {renderStatusBadge(status)}
+          <span className="inline-flex items-center gap-1">
+            {renderStatusBadge(status)}
+            {renderHierarchyWarning(entry.route)}
+          </span>
         </td>
         <td className="py-2 px-3 text-center border-b border-border">
           <Button
@@ -233,6 +365,12 @@ export function AdminUserAccessControl() {
           </SelectContent>
         </Select>
 
+        {selectedUserId && parentName && (
+          <p className="text-xs text-muted-foreground">
+            Líder: <strong>{parentName}</strong>
+          </p>
+        )}
+
         {selectedUserId && rulesLoading && (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -265,7 +403,10 @@ export function AdminUserAccessControl() {
                         </button>
                       </td>
                       <td className="py-2 px-3 text-center border-b border-border">
-                        {renderStatusBadge(getUserRule(mod.route))}
+                        <span className="inline-flex items-center gap-1">
+                          {renderStatusBadge(getUserRule(mod.route))}
+                          {renderHierarchyWarning(mod.route)}
+                        </span>
                       </td>
                       <td className="py-2 px-3 text-center border-b border-border">
                         <Button
