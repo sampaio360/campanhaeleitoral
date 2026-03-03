@@ -27,6 +27,7 @@ export const ROUTE_REGISTRY: RouteEntry[] = [
   { id: "reports", label: "Relatórios", route: "/reports" },
   { id: "historico", label: "Histórico", route: "/historico" },
   { id: "roi", label: "ROI", route: "/roi" },
+  { id: "settings", label: "Configurações", route: "/settings" },
 ];
 
 export const ALL_ROLES: AppRole[] = [

@@ -17,6 +17,7 @@ import { Settings, LogOut, User, Crown, Shield, UserCheck, Building2, Check } fr
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { supabase } from "@/integrations/supabase/client";
 
 const ROLE_LABELS: Record<string, { label: string; icon: typeof Crown }> = {
@@ -44,6 +45,7 @@ interface Campanha {
 export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
   const navigate = useNavigate();
   const { profile, userRoles, campanhaId, isMaster, selectedCampanhaId, setSelectedCampanhaId } = useAuth();
+  const { canAccess } = useAccessControl();
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const userName = profile?.name || user.user_metadata?.name || user.email?.split("@")[0] || "Usuário";
   const avatarUrl = (profile as any)?.avatar_url || null;
@@ -141,10 +143,12 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
           <User className="mr-2 h-4 w-4" />
           Meu Perfil
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/settings")}>
-          <Settings className="mr-2 h-4 w-4" />
-          Configurações
-        </DropdownMenuItem>
+        {canAccess("/settings") && (
+          <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Configurações
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onSignOut} className="text-destructive">

@@ -28,24 +28,47 @@ export function useAccessControl() {
     staleTime: 30_000,
   });
 
+  // Default denials per role when no access_control rules exist
+  const DEFAULT_DENIED: Record<string, string[]> = {
+    supporter: ['/budget', '/expenses', '/settings', '/admin', '/roi'],
+    political_leader: ['/settings', '/admin', '/roi'],
+    local_coordinator: ['/admin', '/roi'],
+  };
+
   const canAccess = useCallback((route: string): boolean => {
     // Master always has access
     if (isMaster) return true;
-    // If no rules loaded yet, default allow
-    if (!rules || rules.length === 0) return true;
 
-    // Check each of the user's roles — if ANY role is allowed, grant access
-    for (const role of userRoles) {
-      const rule = rules.find(r => r.role === role && r.route === route);
-      // No rule = default allowed
-      if (!rule) return true;
-      if (rule.allowed) return true;
+    // Normalize route: /budget/123 -> /budget
+    const normalizedRoute = '/' + route.split('/').filter(Boolean)[0];
+
+    // Check access_control table rules first (source of truth)
+    if (rules && rules.length > 0) {
+      for (const role of userRoles) {
+        const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
+        if (rule) {
+          if (rule.allowed) return true;
+          // explicitly denied — continue checking other roles
+          continue;
+        }
+        // No rule for this role+route: check default denials
+        const denied = DEFAULT_DENIED[role];
+        if (!denied || !denied.includes(normalizedRoute)) return true;
+      }
+
+      // All roles either explicitly denied or default-denied
+      const hasAnyExplicitAllow = userRoles.some(role => {
+        const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
+        return rule?.allowed;
+      });
+      return hasAnyExplicitAllow;
     }
 
-    // All roles explicitly denied
-    // But if no rule matched at all (shouldn't happen after the loop), default allow
-    const hasAnyRule = userRoles.some(role => rules.some(r => r.role === role && r.route === route));
-    if (!hasAnyRule) return true;
+    // No rules in access_control — apply default denials
+    for (const role of userRoles) {
+      const denied = DEFAULT_DENIED[role];
+      if (!denied || !denied.includes(normalizedRoute)) return true;
+    }
 
     return false;
   }, [rules, userRoles, isMaster]);
