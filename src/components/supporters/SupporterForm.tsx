@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/geocode";
 import { z } from "zod";
+import { Loader2, Search } from "lucide-react";
 
 const FUNCOES_POLITICAS = [
   "Prefeito(a)",
@@ -25,6 +26,49 @@ const FUNCOES_POLITICAS = [
   "Outros",
 ];
 
+// --- Masks ---
+function maskCPF(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+function maskCEP(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  return digits.replace(/(\d{5})(\d)/, "$1-$2");
+}
+
+// --- Validation ---
+function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, "");
+  if (digits.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(digits)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+  let rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  if (rest !== parseInt(digits[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+  rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  return rest === parseInt(digits[10]);
+}
+
 const supporterSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   telefone: z.string().trim().max(20).optional().or(z.literal("")),
@@ -34,7 +78,10 @@ const supporterSchema = z.object({
   cidade: z.string().trim().max(100).optional().or(z.literal("")),
   estado: z.string().trim().max(2).optional().or(z.literal("")),
   cep: z.string().trim().max(10).optional().or(z.literal("")),
-  cpf: z.string().trim().max(14).optional().or(z.literal("")),
+  cpf: z.string().trim().max(14).optional().or(z.literal("")).refine(
+    (val) => !val || val.replace(/\D/g, "").length === 0 || isValidCPF(val),
+    { message: "CPF inválido" }
+  ),
   funcao_politica: z.string().trim().max(100).optional().or(z.literal("")),
   observacao: z.string().trim().max(2000).optional().or(z.literal("")),
 });
@@ -67,11 +114,53 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
   const [form, setForm] = useState<SupporterFormData>(initialForm);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (field: keyof SupporterFormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+  const handleMaskedChange = (field: keyof SupporterFormData, value: string, maskFn: (v: string) => string) => {
+    handleChange(field, maskFn(value));
+  };
+
+  // --- CEP Lookup (ViaCEP) ---
+  const lookupCEP = useCallback(async () => {
+    const cepDigits = form.cep?.replace(/\D/g, "") || "";
+    if (cepDigits.length !== 8) {
+      toast({ title: "CEP inválido", description: "Informe um CEP com 8 dígitos.", variant: "destructive" });
+      return;
+    }
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        toast({ title: "CEP não encontrado", description: "Verifique o CEP informado.", variant: "destructive" });
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        endereco: data.logradouro || prev.endereco,
+        bairro: data.bairro || prev.bairro,
+        cidade: data.localidade || prev.cidade,
+        estado: data.uf || prev.estado,
+      }));
+      toast({ title: "Endereço preenchido", description: `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}` });
+    } catch {
+      toast({ title: "Erro ao buscar CEP", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setCepLoading(false);
+    }
+  }, [form.cep, toast]);
+
+  const handleCepKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      lookupCEP();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +195,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         cep: data.cep,
       });
 
-      const { error } = await supabase.from("supporters").insert({
+      // Build insert payload with PostGIS geolocation
+      const insertPayload: Record<string, any> = {
         campanha_id: effectiveCampanhaId,
         nome: data.nome,
         telefone: data.telefone || null,
@@ -115,14 +205,21 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         bairro: data.bairro || null,
         cidade: data.cidade || null,
         estado: data.estado || null,
-        cep: data.cep || null,
-        cpf: data.cpf || null,
+        cep: data.cep?.replace(/\D/g, "") || null,
+        cpf: data.cpf?.replace(/\D/g, "") || null,
         foto_url: fotoUrl,
         funcao_politica: data.funcao_politica || null,
         observacao: data.observacao || null,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
-      } as any);
+      };
+
+      // Send PostGIS POINT if coords available
+      if (coords) {
+        insertPayload.geolocation = `SRID=4326;POINT(${coords.lng} ${coords.lat})`;
+      }
+
+      const { error } = await supabase.from("supporters").insert(insertPayload as any);
 
       if (error) throw error;
 
@@ -180,9 +277,9 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
               <Input
                 id="telefone"
                 value={form.telefone}
-                onChange={(e) => handleChange("telefone", e.target.value)}
+                onChange={(e) => handleMaskedChange("telefone", e.target.value, maskPhone)}
                 placeholder="(77) 99999-0000"
-                maxLength={20}
+                maxLength={15}
               />
             </div>
             <div className="space-y-2">
@@ -225,10 +322,38 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
             <Input
               id="cpf"
               value={form.cpf}
-              onChange={(e) => handleChange("cpf", e.target.value)}
+              onChange={(e) => handleMaskedChange("cpf", e.target.value, maskCPF)}
               placeholder="000.000.000-00"
               maxLength={14}
             />
+            {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+          </div>
+
+          {/* CEP com busca */}
+          <div className="space-y-2">
+            <Label htmlFor="cep">CEP</Label>
+            <div className="flex gap-2">
+              <Input
+                id="cep"
+                value={form.cep}
+                onChange={(e) => handleMaskedChange("cep", e.target.value, maskCEP)}
+                onKeyDown={handleCepKeyDown}
+                placeholder="47800-000"
+                maxLength={9}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={lookupCEP}
+                disabled={cepLoading}
+                title="Buscar CEP"
+              >
+                {cepLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Digite o CEP e clique na lupa para preencher o endereço automaticamente</p>
           </div>
 
           {/* Endereço */}
@@ -243,8 +368,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
             />
           </div>
 
-          {/* Bairro + Cidade + Estado + CEP */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Bairro + Cidade + Estado */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="bairro">Bairro</Label>
               <Input
@@ -273,16 +398,6 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
                 onChange={(e) => handleChange("estado", e.target.value.toUpperCase())}
                 placeholder="BA"
                 maxLength={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cep">CEP</Label>
-              <Input
-                id="cep"
-                value={form.cep}
-                onChange={(e) => handleChange("cep", e.target.value)}
-                placeholder="47800-000"
-                maxLength={10}
               />
             </div>
           </div>
