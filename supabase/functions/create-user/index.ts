@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const { email, name, password, pin, role, campanha_id } = await req.json();
 
     // Only master can assign admin or master roles
-    if ((role === 'admin' || role === 'master') && !callerIsMaster) {
+    if (role && (role === 'admin' || role === 'master') && !callerIsMaster) {
       return new Response(JSON.stringify({ error: 'Forbidden: only master can assign admin or master roles' }), { status: 403, headers: corsHeaders });
     }
 

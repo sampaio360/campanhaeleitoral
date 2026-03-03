@@ -39,8 +39,6 @@ export function AdminUsers() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState(generatePin());
-  const [newUserRole, setNewUserRole] = useState<AppRole>("supporter");
-  const [newUserCampanha, setNewUserCampanha] = useState<string>("");
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const { isMaster } = useAuth();
@@ -132,7 +130,7 @@ export function AdminUsers() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { email: string; name: string; password: string; pin: string; role: AppRole; campanha_id?: string }) => {
+    mutationFn: async (userData: { email: string; name: string; password: string; pin: string }) => {
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: userData,
       });
@@ -179,8 +177,6 @@ export function AdminUsers() {
     setNewUserName("");
     setNewUserPassword("");
     setNewUserPin(generatePin());
-    setNewUserRole("supporter");
-    setNewUserCampanha("");
   };
 
   const copyPin = (pin: string) => {
@@ -309,38 +305,9 @@ export function AdminUsers() {
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Função</Label>
-                <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as AppRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="supporter">Apoiador</SelectItem>
-                    <SelectItem value="political_leader">Liderança Política</SelectItem>
-                    <SelectItem value="local_coordinator">Coordenador Local</SelectItem>
-                    <SelectItem value="supervisor">Supervisor de Área</SelectItem>
-                    <SelectItem value="coordinator">Coordenador Geral</SelectItem>
-                    <SelectItem value="candidate">Candidato</SelectItem>
-                    {isMaster && <SelectItem value="admin">Administrador de Sistema</SelectItem>}
-                    {isMaster && <SelectItem value="master">Master (Desenvolvedor)</SelectItem>}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Campanha</Label>
-                <Select value={newUserCampanha} onValueChange={setNewUserCampanha}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma campanha" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem campanha</SelectItem>
-                    {campanhas?.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Após criar o usuário, atribua a função e campanha nas abas "Permissões" e "Acesso".
+              </p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -352,8 +319,6 @@ export function AdminUsers() {
                   name: newUserName,
                   password: newUserPassword,
                   pin: newUserPin,
-                  role: newUserRole,
-                  campanha_id: newUserCampanha && newUserCampanha !== "none" ? newUserCampanha : undefined
                 })}
                 disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPassword.length < 6 || newUserPin.length !== 4}
               >
