@@ -442,12 +442,61 @@ export type Database = {
           },
         ]
       }
+      municipio_eleicoes: {
+        Row: {
+          campanha_id: string
+          cargo: string
+          created_at: string
+          eleicao_ano: number
+          id: string
+          municipio_id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          campanha_id: string
+          cargo: string
+          created_at?: string
+          eleicao_ano: number
+          id?: string
+          municipio_id: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          campanha_id?: string
+          cargo?: string
+          created_at?: string
+          eleicao_ano?: number
+          id?: string
+          municipio_id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "municipio_eleicoes_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "municipio_eleicoes_municipio_id_fkey"
+            columns: ["municipio_id"]
+            isOneToOne: false
+            referencedRelation: "municipios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       municipio_historico_votacao: {
         Row: {
           campanha_id: string
           cargo: string
           created_at: string
           eleicao_ano: number
+          eleicao_id: string | null
           id: string
           municipio_id: string
           notes: string | null
@@ -459,6 +508,7 @@ export type Database = {
           cargo: string
           created_at?: string
           eleicao_ano: number
+          eleicao_id?: string | null
           id?: string
           municipio_id: string
           notes?: string | null
@@ -470,6 +520,7 @@ export type Database = {
           cargo?: string
           created_at?: string
           eleicao_ano?: number
+          eleicao_id?: string | null
           id?: string
           municipio_id?: string
           notes?: string | null
@@ -482,6 +533,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "municipio_historico_votacao_eleicao_id_fkey"
+            columns: ["eleicao_id"]
+            isOneToOne: false
+            referencedRelation: "municipio_eleicoes"
             referencedColumns: ["id"]
           },
           {
