@@ -53,7 +53,7 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
 
   // Fetch municipios
   const { data: municipios } = useQuery({
-    queryKey: ["municipios", campanhaId],
+    queryKey: ["municipios-names", campanhaId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("municipios").select("id, nome, estado")
