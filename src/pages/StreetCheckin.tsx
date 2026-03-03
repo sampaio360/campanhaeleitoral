@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { enqueueOffline } from "@/lib/offlineSync";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { MapPin, Play, Square, Plus, Search, Loader2, MessageSquare, Camera } from "lucide-react";
 
 
@@ -58,6 +59,20 @@ const StreetCheckin = () => {
   const [showAddStreet, setShowAddStreet] = useState(false);
   const [newStreet, setNewStreet] = useState({ nome: "", bairro: "", cidade: "" });
   const [creating, setCreating] = useState(false);
+  const streetInputRef = useRef<HTMLInputElement>(null);
+
+  const { ready: placesReady, setOnSelect } = useGooglePlaces(streetInputRef);
+
+  useEffect(() => {
+    setOnSelect((place) => {
+      setNewStreet((prev) => ({
+        ...prev,
+        nome: place.nome || prev.nome,
+        bairro: place.bairro || prev.bairro,
+        cidade: place.cidade || prev.cidade,
+      }));
+    });
+  }, [setOnSelect]);
 
   // Feedback dialog state
   const [feedbackDialog, setFeedbackDialog] = useState<{ open: boolean; checkinId: string }>({ open: false, checkinId: "" });
@@ -274,8 +289,8 @@ const StreetCheckin = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Nome da Rua *</Label>
-                  <Input value={newStreet.nome} onChange={(e) => setNewStreet((p) => ({ ...p, nome: e.target.value }))} placeholder="Ex: Av. Brasil" />
+                  <Label>Nome da Rua * {placesReady && <span className="text-xs text-muted-foreground">(com autocomplete)</span>}</Label>
+                  <Input ref={streetInputRef} value={newStreet.nome} onChange={(e) => setNewStreet((p) => ({ ...p, nome: e.target.value }))} placeholder="Digite o endereço..." />
                 </div>
                 <div className="space-y-2">
                   <Label>Bairro</Label>
