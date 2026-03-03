@@ -928,6 +928,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           nome: string
+          observacao: string | null
           telefone: string | null
           updated_at: string | null
         }
@@ -948,6 +949,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           nome: string
+          observacao?: string | null
           telefone?: string | null
           updated_at?: string | null
         }
@@ -968,6 +970,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           nome?: string
+          observacao?: string | null
           telefone?: string | null
           updated_at?: string | null
         }

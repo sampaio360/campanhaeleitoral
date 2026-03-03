@@ -1,0 +1,1 @@
+ALTER TABLE public.supporters ADD COLUMN observacao text NULL;
