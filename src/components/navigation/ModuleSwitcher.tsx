@@ -6,7 +6,8 @@ import {
   FileText,
   Settings,
   MapPin,
-  Package
+  Package,
+  CalendarDays
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccessControl } from "@/hooks/useAccessControl";
@@ -18,6 +19,7 @@ const modules = [
   { id: "pessoas", title: "Pessoas", icon: Users, route: "/supporters" },
   { id: "checkin", title: "Check-in", icon: MapPin, route: "/checkin" },
   { id: "resources", title: "Recursos", icon: Package, route: "/resources" },
+  { id: "agenda", title: "Agenda", icon: CalendarDays, route: "/agenda" },
   { id: "reports", title: "Relatórios", icon: FileText, route: "/reports" },
 ];
 
