@@ -203,6 +203,8 @@ export function AdminPermissions() {
                   </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="supporter">Apoiador</SelectItem>
+                      <SelectItem value="political_leader">Liderança Política</SelectItem>
+                      <SelectItem value="local_coordinator">Coordenador Local</SelectItem>
                       <SelectItem value="supervisor">Supervisor de Área</SelectItem>
                       <SelectItem value="coordinator">Coordenador Geral</SelectItem>
                       <SelectItem value="candidate">Candidato</SelectItem>

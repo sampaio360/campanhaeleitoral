@@ -147,6 +147,8 @@ export function AdminUsers() {
       case 'admin': return 'destructive';
       case 'candidate': return 'default';
       case 'coordinator': return 'default';
+      case 'local_coordinator': return 'outline';
+      case 'political_leader': return 'outline';
       case 'supervisor': return 'secondary';
       default: return 'secondary';
     }
@@ -158,6 +160,8 @@ export function AdminUsers() {
       case 'admin': return 'Administrador de Sistema';
       case 'candidate': return 'Candidato';
       case 'coordinator': return 'Coordenador Geral';
+      case 'local_coordinator': return 'Coordenador Local';
+      case 'political_leader': return 'Liderança Política';
       case 'supervisor': return 'Supervisor de Área';
       default: return 'Apoiador';
     }
@@ -266,6 +270,8 @@ export function AdminUsers() {
                   </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="supporter">Apoiador</SelectItem>
+                    <SelectItem value="political_leader">Liderança Política</SelectItem>
+                    <SelectItem value="local_coordinator">Coordenador Local</SelectItem>
                     <SelectItem value="supervisor">Supervisor de Área</SelectItem>
                     <SelectItem value="coordinator">Coordenador Geral</SelectItem>
                     <SelectItem value="candidate">Candidato</SelectItem>
