@@ -65,12 +65,12 @@ const StreetCheckin = () => {
 
   useEffect(() => {
     setOnSelect((place) => {
-      setNewStreet((prev) => ({
-        ...prev,
-        nome: place.nome || prev.nome,
-        bairro: place.bairro || prev.bairro,
-        cidade: place.cidade || prev.cidade,
-      }));
+      console.log("Google Places result:", place);
+      setNewStreet({
+        nome: place.nome || "",
+        bairro: place.bairro || "",
+        cidade: place.cidade || "",
+      });
     });
   }, [setOnSelect]);
 

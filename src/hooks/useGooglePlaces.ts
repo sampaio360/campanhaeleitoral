@@ -34,11 +34,20 @@ function loadGoogleScript(apiKey: string): Promise<void> {
     };
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces&loading=async`;
     script.async = true;
     script.defer = true;
     document.head.appendChild(script);
   });
+}
+
+// Ensure pac-container has high z-index
+function ensurePacStyles() {
+  if (document.getElementById("pac-style")) return;
+  const style = document.createElement("style");
+  style.id = "pac-style";
+  style.textContent = `.pac-container { z-index: 99999 !important; }`;
+  document.head.appendChild(style);
 }
 
 export function useGooglePlaces(inputRef: React.RefObject<HTMLInputElement | null>, visible: boolean = true) {
@@ -61,6 +70,8 @@ export function useGooglePlaces(inputRef: React.RefObject<HTMLInputElement | nul
 
   useEffect(() => {
     if (!ready || !visible || !inputRef.current || autocompleteRef.current) return;
+
+    ensurePacStyles();
 
     const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
       types: ["address"],
@@ -89,7 +100,6 @@ export function useGooglePlaces(inputRef: React.RefObject<HTMLInputElement | nul
     autocompleteRef.current = autocomplete;
 
     return () => {
-      // Clean up on hide so it re-attaches on next show
       if (!visible) {
         autocompleteRef.current = null;
       }
