@@ -5,7 +5,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { Navbar } from "@/components/Navbar";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Link2, Shield, GitBranch, UserCheck, FileText } from "lucide-react";
+import { Building2, Users, Link2, Shield, FileText } from "lucide-react";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminPermissions } from "@/components/admin/AdminPermissions";
 import { AdminCampanhas } from "@/components/admin/AdminCampanhas";
@@ -16,11 +16,9 @@ import { AdminExternalForm } from "@/components/admin/AdminExternalForm";
 
 const adminTabs = [
   { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas" },
-  { value: "users", label: "Usuários", icon: Users, step: 2, hint: "Cadastre usuários no sistema", route: "/admin?tab=users" },
+  { value: "users", label: "Usuários", icon: Users, step: 2, hint: "Cadastre, vincule e organize seus usuários", route: "/admin?tab=users" },
   { value: "access", label: "Acesso", icon: Link2, step: 3, hint: "Vincule usuários às campanhas", route: "/admin?tab=access" },
   { value: "permissions", label: "Permissões", icon: Shield, step: 4, hint: "Defina funções e controle de acesso", route: "/admin?tab=permissions" },
-  { value: "vinculos", label: "Vínculos", icon: UserCheck, hint: "Vincule usuários a apoiadores", route: "/admin?tab=vinculos" },
-  { value: "hierarchy", label: "Hierarquia", icon: GitBranch, hint: "Estrutura organizacional", route: "/admin?tab=hierarchy" },
   { value: "external-form", label: "Form Externo", icon: FileText, hint: "Configure formulário público", route: "/admin?tab=external-form" },
 ];
 
@@ -93,11 +91,15 @@ const Admin = () => {
           )}
 
           <TabsContent value="campanhas"><AdminCampanhas /></TabsContent>
-          <TabsContent value="users"><AdminUsers /></TabsContent>
+          <TabsContent value="users">
+            <div className="space-y-8">
+              <AdminUsers />
+              <AdminUserSupporters />
+              <AdminHierarchy />
+            </div>
+          </TabsContent>
           <TabsContent value="access"><AdminUserCampanhas /></TabsContent>
           <TabsContent value="permissions"><AdminPermissions /></TabsContent>
-          <TabsContent value="vinculos"><AdminUserSupporters /></TabsContent>
-          <TabsContent value="hierarchy"><AdminHierarchy /></TabsContent>
           <TabsContent value="external-form"><AdminExternalForm /></TabsContent>
         </Tabs>
       </div>
