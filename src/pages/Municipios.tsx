@@ -50,40 +50,42 @@ const Municipios = () => {
 
   // Setup Google Places autocomplete for city search
   useEffect(() => {
-    if (!dialogOpen || editingId) return;
-
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || !window.google?.maps?.places) {
-      // Load Google script if not loaded
-      if (apiKey && !window.google?.maps?.places) {
-        const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-        if (!existing) {
-          window.initGooglePlaces = () => {};
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces&loading=async`;
-          script.async = true;
-          document.head.appendChild(script);
-          script.onload = () => initAutocomplete();
-        } else {
-          // Script exists but may still be loading
-          const check = setInterval(() => {
-            if (window.google?.maps?.places) {
-              clearInterval(check);
-              initAutocomplete();
-            }
-          }, 200);
-          return () => clearInterval(check);
-        }
-      }
+    if (!dialogOpen) {
+      autocompleteRef.current = null;
       return;
     }
 
-    initAutocomplete();
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) return;
 
-    function initAutocomplete() {
-      if (!nomeInputRef.current || autocompleteRef.current) return;
+    let cancelled = false;
 
-      // Ensure pac-container z-index
+    function ensureGoogleLoaded(): Promise<void> {
+      return new Promise((resolve) => {
+        if (window.google?.maps?.places) { resolve(); return; }
+
+        // If script tag exists, poll for it
+        const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (existing) {
+          const check = setInterval(() => {
+            if (window.google?.maps?.places) { clearInterval(check); resolve(); }
+          }, 150);
+          return;
+        }
+
+        // Load fresh
+        window.initGooglePlaces = () => resolve();
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces&loading=async`;
+        script.async = true;
+        document.head.appendChild(script);
+      });
+    }
+
+    ensureGoogleLoaded().then(() => {
+      if (cancelled || !nomeInputRef.current || autocompleteRef.current) return;
+
+      // z-index fix
       if (!document.getElementById("pac-style")) {
         const style = document.createElement("style");
         style.id = "pac-style";
@@ -91,7 +93,7 @@ const Municipios = () => {
         document.head.appendChild(style);
       }
 
-      const ac = new window.google.maps.places.Autocomplete(nomeInputRef.current, {
+      const ac = new window.google.maps.places.Autocomplete(nomeInputRef.current!, {
         types: ["(cities)"],
         componentRestrictions: { country: "br" },
         fields: ["address_components", "name"],
@@ -113,12 +115,10 @@ const Municipios = () => {
       });
 
       autocompleteRef.current = ac;
-    }
+    });
 
-    return () => {
-      autocompleteRef.current = null;
-    };
-  }, [dialogOpen, editingId]);
+    return () => { cancelled = true; };
+  }, [dialogOpen]);
 
   const { data: municipios, isLoading } = useQuery({
     queryKey: ["municipios", activeCampanhaId],
