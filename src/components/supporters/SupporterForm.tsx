@@ -57,7 +57,8 @@ const supporterSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   telefone: z.string().trim().max(20).optional().or(z.literal("")),
   email: z.string().trim().email("Email inválido").max(255).optional().or(z.literal("")),
-  endereco: z.string().trim().max(200).optional().or(z.literal("")),
+  rua: z.string().trim().max(200).optional().or(z.literal("")),
+  numero: z.string().trim().max(20).optional().or(z.literal("")),
   bairro: z.string().trim().max(100).optional().or(z.literal("")),
   cidade: z.string().trim().max(100).optional().or(z.literal("")),
   estado: z.string().trim().max(2).optional().or(z.literal("")),
@@ -78,7 +79,7 @@ interface SupporterFormProps {
 }
 
 const initialForm: SupporterFormData = {
-  nome: "", telefone: "", email: "", endereco: "", bairro: "",
+  nome: "", telefone: "", email: "", rua: "", numero: "", bairro: "",
   cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
 };
 
@@ -104,9 +105,14 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
   useEffect(() => {
     if (placesReady) {
       setOnSelect((place) => {
+        // place.nome comes as "Rua X, 123" — split street and number
+        const parts = (place.nome || "").split(",").map(s => s.trim());
+        const rua = parts[0] || "";
+        const numero = parts[1] || "";
         setForm(f => ({
           ...f,
-          endereco: place.nome || f.endereco,
+          rua: rua || f.rua,
+          numero: numero || f.numero,
           bairro: place.bairro || f.bairro,
           cidade: place.cidade || f.cidade,
           estado: place.estado || f.estado,
@@ -166,7 +172,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
       }
       setForm((prev) => ({
         ...prev,
-        endereco: data.logradouro || prev.endereco,
+        rua: data.logradouro || prev.rua,
         bairro: data.bairro || prev.bairro,
         cidade: data.localidade || prev.cidade,
         estado: data.uf || prev.estado,
@@ -200,11 +206,12 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
     setSaving(true);
     try {
       const data = result.data;
-      const coords = await geocodeAddress({ endereco: data.endereco, bairro: data.bairro, cidade: data.cidade, estado: data.estado, cep: data.cep });
+      const enderecoCompleto = [data.rua, data.numero].filter(Boolean).join(", ");
+      const coords = await geocodeAddress({ endereco: enderecoCompleto, bairro: data.bairro, cidade: data.cidade, estado: data.estado, cep: data.cep });
       const insertPayload: Record<string, any> = {
         campanha_id: effectiveCampanhaId, nome: data.nome,
         telefone: data.telefone || null, email: data.email || null,
-        endereco: data.endereco || null, bairro: data.bairro || null,
+        endereco: enderecoCompleto || null, bairro: data.bairro || null,
         cidade: data.cidade || null, estado: data.estado || null,
         cep: data.cep?.replace(/\D/g, "") || null, cpf: data.cpf?.replace(/\D/g, "") || null,
         foto_url: fotoUrl, funcao_politica: data.funcao_politica || null,
@@ -281,18 +288,30 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
             </div>
           </div>
 
-          {/* Endereço (Google Places autocomplete) */}
-          <div className="space-y-2">
-            <Label htmlFor="endereco">Endereço</Label>
-            <Input
-              id="endereco"
-              ref={enderecoInputRef}
-              value={form.endereco}
-              onChange={(e) => handleChange("endereco", e.target.value)}
-              placeholder="Digite o endereço completo"
-              maxLength={200}
-            />
-            <p className="text-xs text-muted-foreground">Comece a digitar para sugestões do Google Maps</p>
+          {/* Rua (Google Places) + Número */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2 md:col-span-3">
+              <Label htmlFor="rua">Rua / Logradouro</Label>
+              <Input
+                id="rua"
+                ref={enderecoInputRef}
+                value={form.rua}
+                onChange={(e) => handleChange("rua", e.target.value)}
+                placeholder="Digite a rua para sugestões"
+                maxLength={200}
+              />
+              <p className="text-xs text-muted-foreground">Sugestões do Google Maps ao digitar</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="numero">Número</Label>
+              <Input
+                id="numero"
+                value={form.numero}
+                onChange={(e) => handleChange("numero", e.target.value)}
+                placeholder="Nº"
+                maxLength={20}
+              />
+            </div>
           </div>
 
           {/* Cidade (IBGE) + UF */}
