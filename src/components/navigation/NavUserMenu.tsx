@@ -53,6 +53,7 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
 
   useEffect(() => {
     if (!isMaster) return;
+    // Master sees all campanhas; RLS already handles filtering for other roles
     supabase
       .from("campanhas")
       .select("id, nome, partido, municipio, uf")
