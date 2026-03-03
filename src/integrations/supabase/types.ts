@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_control: {
+        Row: {
+          allowed: boolean
+          campanha_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          route: string
+          updated_at: string
+        }
+        Insert: {
+          allowed?: boolean
+          campanha_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          route: string
+          updated_at?: string
+        }
+        Update: {
+          allowed?: boolean
+          campanha_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          route?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_control_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string

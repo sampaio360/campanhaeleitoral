@@ -3,11 +3,13 @@ import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Rout
 import { Card, CardContent } from "@/components/ui/card";
 import { useDashboardData } from "./useDashboardData";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
 export function DashboardModuleGrid() {
   const { stats, loading } = useDashboardData();
   const { profile, isAdmin } = useAuth();
+  const { canAccess } = useAccessControl();
   const navigate = useNavigate();
   const hasCandidate = !!profile?.candidate_id;
 
@@ -118,9 +120,11 @@ export function DashboardModuleGrid() {
     );
   }
 
+  const filteredModules = modules.filter(mod => canAccess(mod.route));
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-      {modules.map((mod) => {
+      {filteredModules.map((mod) => {
         const Icon = mod.icon;
         return (
           <Card

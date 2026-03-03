@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { PinGate } from "@/components/PinGate";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,12 +11,14 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
+  const { canAccess, isLoading: accessLoading } = useAccessControl();
   const location = useLocation();
+  const { toast } = useToast();
   const [pinVerified, setPinVerified] = useState(
     () => sessionStorage.getItem("pin_verified") === "true"
   );
 
-  if (loading) {
+  if (loading || accessLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -29,9 +33,19 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // User is authenticated but PIN not verified this session
   if (!pinVerified) {
     return <PinGate onSuccess={() => setPinVerified(true)} />;
+  }
+
+  // Check access control for current route
+  const currentPath = location.pathname;
+  if (!canAccess(currentPath)) {
+    toast({
+      title: "Acesso negado",
+      description: "Você não tem permissão para acessar este módulo.",
+      variant: "destructive",
+    });
+    return <Navigate to="/modulos" replace />;
   }
 
   return <>{children}</>;

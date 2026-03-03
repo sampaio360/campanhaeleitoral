@@ -9,6 +9,7 @@ import {
   Package
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
 const modules = [
@@ -26,8 +27,10 @@ export function ModuleSwitcher() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAdmin } = useAuth();
+  const { canAccess } = useAccessControl();
 
   const allModules = isAdmin ? [...modules, adminModule] : modules;
+  const filteredModules = allModules.filter(mod => canAccess(mod.route));
 
   const isActive = (mod: typeof modules[0]) => {
     if ("children" in mod && mod.children) {
@@ -38,7 +41,7 @@ export function ModuleSwitcher() {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {allModules.map((mod) => {
+      {filteredModules.map((mod) => {
         const Icon = mod.icon;
         const active = isActive(mod);
         return (
