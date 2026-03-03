@@ -76,12 +76,12 @@ export function AdminAccessControl() {
   });
 
   const allRoutes = useMemo(() => {
-    const routes: string[] = [];
+    const set = new Set<string>();
     ROUTE_REGISTRY.forEach(mod => {
-      routes.push(mod.route);
-      mod.children?.forEach(child => routes.push(child.route));
+      set.add(mod.route);
+      mod.children?.forEach(child => set.add(child.route));
     });
-    return routes;
+    return Array.from(set);
   }, []);
 
   const isAllowed = (role: AppRole, route: string): boolean => {
