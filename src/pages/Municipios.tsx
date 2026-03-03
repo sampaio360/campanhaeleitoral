@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,80 @@ const Municipios = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MunicipioForm>(emptyForm);
   const [search, setSearch] = useState("");
+  const nomeInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
+
+  // Setup Google Places autocomplete for city search
+  useEffect(() => {
+    if (!dialogOpen || editingId) return;
+
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey || !window.google?.maps?.places) {
+      // Load Google script if not loaded
+      if (apiKey && !window.google?.maps?.places) {
+        const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (!existing) {
+          window.initGooglePlaces = () => {};
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces&loading=async`;
+          script.async = true;
+          document.head.appendChild(script);
+          script.onload = () => initAutocomplete();
+        } else {
+          // Script exists but may still be loading
+          const check = setInterval(() => {
+            if (window.google?.maps?.places) {
+              clearInterval(check);
+              initAutocomplete();
+            }
+          }, 200);
+          return () => clearInterval(check);
+        }
+      }
+      return;
+    }
+
+    initAutocomplete();
+
+    function initAutocomplete() {
+      if (!nomeInputRef.current || autocompleteRef.current) return;
+
+      // Ensure pac-container z-index
+      if (!document.getElementById("pac-style")) {
+        const style = document.createElement("style");
+        style.id = "pac-style";
+        style.textContent = `.pac-container { z-index: 99999 !important; }`;
+        document.head.appendChild(style);
+      }
+
+      const ac = new window.google.maps.places.Autocomplete(nomeInputRef.current, {
+        types: ["(cities)"],
+        componentRestrictions: { country: "br" },
+        fields: ["address_components", "name"],
+      });
+
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        if (!place.address_components) return;
+
+        const getComp = (type: string, short = false) => {
+          const comp = place.address_components.find((c: any) => c.types.includes(type));
+          return short ? comp?.short_name || "" : comp?.long_name || "";
+        };
+
+        const cityName = getComp("administrative_area_level_2") || getComp("locality") || place.name || "";
+        const uf = getComp("administrative_area_level_1", true);
+
+        setForm(f => ({ ...f, nome: cityName, estado: uf }));
+      });
+
+      autocompleteRef.current = ac;
+    }
+
+    return () => {
+      autocompleteRef.current = null;
+    };
+  }, [dialogOpen, editingId]);
 
   const { data: municipios, isLoading } = useQuery({
     queryKey: ["municipios", activeCampanhaId],
@@ -168,7 +242,14 @@ const Municipios = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="nome">Nome *</Label>
-                    <Input id="nome" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} required />
+                    <Input
+                      id="nome"
+                      ref={nomeInputRef}
+                      value={form.nome}
+                      onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                      placeholder="Digite o nome da cidade"
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="estado">Estado *</Label>
