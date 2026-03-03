@@ -365,9 +365,11 @@ const Municipios = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" title="Histórico de Votação"
+                            <Button variant="outline" size="sm" title="Histórico de Votação"
+                              className="gap-1 text-xs"
                               onClick={() => setHistoryMunicipio({ id: m.id, nome: m.nome })}>
                               <History className="w-4 h-4" />
+                              <span className="hidden lg:inline">Votação</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                               <Pencil className="w-4 h-4" />
