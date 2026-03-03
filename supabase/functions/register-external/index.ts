@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
-    const { token, nome, email, password, pin, telefone, cpf, funcao_politica, endereco, bairro, cidade, estado, cep } = body;
+    const { token, nome, email, password, pin, telefone, cpf, funcao_politica, endereco, bairro, cidade, estado, cep, observacao } = body;
 
     // Validate required fields
     if (!token || !nome || !email || !password || !pin) {
@@ -131,6 +131,7 @@ Deno.serve(async (req) => {
         cep: cep || null,
         cpf: cpf || null,
         funcao_politica: funcao_politica || null,
+        observacao: observacao || null,
       })
       .select('id')
       .single();

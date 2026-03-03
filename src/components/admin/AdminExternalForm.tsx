@@ -27,6 +27,7 @@ const FIELD_OPTIONS = [
   { key: "estado", label: "UF" },
   { key: "cep", label: "CEP" },
   { key: "foto", label: "Foto" },
+  { key: "observacao", label: "Observação" },
 ];
 
 export function AdminExternalForm() {

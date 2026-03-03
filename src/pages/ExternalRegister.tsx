@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -44,6 +45,7 @@ const supporterSchema = z.object({
   cep: z.string().trim().max(10).optional().or(z.literal("")),
   cpf: z.string().trim().max(14).optional().or(z.literal("")),
   funcao_politica: z.string().trim().max(100).optional().or(z.literal("")),
+  observacao: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 type FormData = z.infer<typeof supporterSchema>;
@@ -51,13 +53,14 @@ type FormData = z.infer<typeof supporterSchema>;
 const initialForm: FormData = {
   nome: "", email: "", password: "", pin: "",
   telefone: "", endereco: "", bairro: "", cidade: "",
-  estado: "", cep: "", cpf: "", funcao_politica: "",
+  estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
 };
 
 const FIELD_LABELS: Record<string, string> = {
   nome: "Nome Completo", telefone: "Telefone", email: "Email",
   cpf: "CPF", endereco: "Endereço", bairro: "Bairro",
   cidade: "Cidade", estado: "UF", cep: "CEP", funcao_politica: "Função Política",
+  observacao: "Observação",
 };
 
 export default function ExternalRegister() {
@@ -166,6 +169,7 @@ export default function ExternalRegister() {
           cidade: data.cidade || null,
           estado: data.estado || null,
           cep: data.cep || null,
+          observacao: data.observacao || null,
         },
       });
 
@@ -314,6 +318,13 @@ export default function ExternalRegister() {
                       {FUNCOES_POLITICAS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {isFieldVisible("observacao") && (
+                <div className="space-y-2">
+                  <Label htmlFor="observacao">Observação</Label>
+                  <Textarea id="observacao" value={form.observacao} onChange={(e) => handleChange("observacao", e.target.value)} placeholder="Informações adicionais..." maxLength={500} rows={3} />
                 </div>
               )}
 
