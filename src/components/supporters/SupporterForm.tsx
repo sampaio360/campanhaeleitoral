@@ -11,41 +11,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/geocode";
 import { useIBGEMunicipios } from "@/hooks/useIBGEMunicipios";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { z } from "zod";
 import { Loader2, Search } from "lucide-react";
 
 const FUNCOES_POLITICAS = [
-  "Prefeito(a)",
-  "Vereador(a)",
-  "Presidente de Bairro",
-  "Líder Comunitário",
-  "Coordenador(a) de Campanha",
-  "Cabo Eleitoral",
-  "Assessor(a) Político",
-  "Militante",
-  "Simpatizante",
-  "Outros",
+  "Prefeito(a)", "Vereador(a)", "Presidente de Bairro", "Líder Comunitário",
+  "Coordenador(a) de Campanha", "Cabo Eleitoral", "Assessor(a) Político",
+  "Militante", "Simpatizante", "Outros",
 ];
 
-// --- Masks ---
 function maskCPF(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
-  return digits
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  return digits.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
 function maskPhone(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 10) {
-    return digits
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d)/, "$1-$2");
-  }
-  return digits
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
+  if (digits.length <= 10) return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+  return digits.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
 }
 
 function maskCEP(value: string): string {
@@ -53,7 +37,6 @@ function maskCEP(value: string): string {
   return digits.replace(/(\d{5})(\d)/, "$1-$2");
 }
 
-// --- Validation ---
 function isValidCPF(cpf: string): boolean {
   const digits = cpf.replace(/\D/g, "");
   if (digits.length !== 11) return false;
@@ -95,17 +78,8 @@ interface SupporterFormProps {
 }
 
 const initialForm: SupporterFormData = {
-  nome: "",
-  telefone: "",
-  email: "",
-  endereco: "",
-  bairro: "",
-  cidade: "",
-  estado: "",
-  cep: "",
-  cpf: "",
-  funcao_politica: "",
-  observacao: "",
+  nome: "", telefone: "", email: "", endereco: "", bairro: "",
+  cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
@@ -123,13 +97,31 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const cidadeInputRef = useRef<HTMLInputElement>(null);
 
+  // Google Places autocomplete for endereco
+  const enderecoInputRef = useRef<HTMLInputElement>(null);
+  const { ready: placesReady, setOnSelect } = useGooglePlaces(enderecoInputRef, true);
+
+  useEffect(() => {
+    if (placesReady) {
+      setOnSelect((place) => {
+        setForm(f => ({
+          ...f,
+          endereco: place.nome || f.endereco,
+          bairro: place.bairro || f.bairro,
+          cidade: place.cidade || f.cidade,
+          estado: place.estado || f.estado,
+          cep: place.cep ? maskCEP(place.cep) : f.cep,
+        }));
+        if (place.cidade) ibge.setQuery(place.cidade);
+      });
+    }
+  }, [placesReady, setOnSelect]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(e.target as Node) &&
-        cidadeInputRef.current &&
-        !cidadeInputRef.current.contains(e.target as Node)
+        suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+        cidadeInputRef.current && !cidadeInputRef.current.contains(e.target as Node)
       ) {
         ibge.close();
       }
@@ -158,7 +150,6 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
     ibge.setQuery(value);
   };
 
-  // --- CEP Lookup (ViaCEP) ---
   const lookupCEP = useCallback(async () => {
     const cepDigits = form.cep?.replace(/\D/g, "") || "";
     if (cepDigits.length !== 8) {
@@ -170,7 +161,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
       const res = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`);
       const data = await res.json();
       if (data.erro) {
-        toast({ title: "CEP não encontrado", description: "Verifique o CEP informado.", variant: "destructive" });
+        toast({ title: "CEP não encontrado", variant: "destructive" });
         return;
       }
       setForm((prev) => ({
@@ -181,79 +172,49 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         estado: data.uf || prev.estado,
       }));
       ibge.setQuery(data.localidade || "");
-      toast({ title: "Endereço preenchido", description: `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}` });
+      toast({ title: "Endereço preenchido" });
     } catch {
-      toast({ title: "Erro ao buscar CEP", description: "Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro ao buscar CEP", variant: "destructive" });
     } finally {
       setCepLoading(false);
     }
   }, [form.cep, toast]);
 
   const handleCepKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      lookupCEP();
-    }
+    if (e.key === "Enter") { e.preventDefault(); lookupCEP(); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const result = supporterSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
-      result.error.issues.forEach((issue) => {
-        const field = issue.path[0] as string;
-        fieldErrors[field] = issue.message;
-      });
+      result.error.issues.forEach((issue) => { fieldErrors[issue.path[0] as string] = issue.message; });
       setErrors(fieldErrors);
       return;
     }
-
     if (!effectiveCampanhaId) {
-      toast({ title: "Erro", description: "Selecione uma campanha no menu do usuário.", variant: "destructive" });
+      toast({ title: "Erro", description: "Selecione uma campanha.", variant: "destructive" });
       return;
     }
-
     setSaving(true);
     try {
       const data = result.data;
-
-      const coords = await geocodeAddress({
-        endereco: data.endereco,
-        bairro: data.bairro,
-        cidade: data.cidade,
-        estado: data.estado,
-        cep: data.cep,
-      });
-
+      const coords = await geocodeAddress({ endereco: data.endereco, bairro: data.bairro, cidade: data.cidade, estado: data.estado, cep: data.cep });
       const insertPayload: Record<string, any> = {
-        campanha_id: effectiveCampanhaId,
-        nome: data.nome,
-        telefone: data.telefone || null,
-        email: data.email || null,
-        endereco: data.endereco || null,
-        bairro: data.bairro || null,
-        cidade: data.cidade || null,
-        estado: data.estado || null,
-        cep: data.cep?.replace(/\D/g, "") || null,
-        cpf: data.cpf?.replace(/\D/g, "") || null,
-        foto_url: fotoUrl,
-        funcao_politica: data.funcao_politica || null,
+        campanha_id: effectiveCampanhaId, nome: data.nome,
+        telefone: data.telefone || null, email: data.email || null,
+        endereco: data.endereco || null, bairro: data.bairro || null,
+        cidade: data.cidade || null, estado: data.estado || null,
+        cep: data.cep?.replace(/\D/g, "") || null, cpf: data.cpf?.replace(/\D/g, "") || null,
+        foto_url: fotoUrl, funcao_politica: data.funcao_politica || null,
         observacao: data.observacao || null,
-        latitude: coords?.lat ?? null,
-        longitude: coords?.lng ?? null,
+        latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
       };
-
-      if (coords) {
-        insertPayload.geolocation = `SRID=4326;POINT(${coords.lng} ${coords.lat})`;
-      }
-
+      if (coords) insertPayload.geolocation = `SRID=4326;POINT(${coords.lng} ${coords.lat})`;
       const { error } = await supabase.from("supporters").insert(insertPayload as any);
-
       if (error) throw error;
-
-      toast({ title: "Pessoa cadastrada!", description: `${data.nome} foi adicionado(a) com sucesso.` });
+      toast({ title: "Pessoa cadastrada!", description: `${data.nome} adicionado(a) com sucesso.` });
       setForm(initialForm);
       setFotoUrl(null);
       ibge.setQuery("");
@@ -275,13 +236,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Foto */}
           <div className="flex items-center gap-4">
-            <AvatarUpload
-              currentUrl={fotoUrl}
-              fallback={form.nome ? form.nome.charAt(0).toUpperCase() : "A"}
-              onUploaded={setFotoUrl}
-              folder="supporters"
-              size="md"
-            />
+            <AvatarUpload currentUrl={fotoUrl} fallback={form.nome ? form.nome.charAt(0).toUpperCase() : "A"} onUploaded={setFotoUrl} folder="supporters" size="md" />
             <div>
               <p className="text-sm font-medium">Foto do Apoiador</p>
               <p className="text-xs text-muted-foreground">Clique no ícone da câmera para adicionar</p>
@@ -291,13 +246,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
           {/* Nome */}
           <div className="space-y-2">
             <Label htmlFor="nome">Nome Completo *</Label>
-            <Input
-              id="nome"
-              value={form.nome}
-              onChange={(e) => handleChange("nome", e.target.value)}
-              placeholder="Nome do apoiador"
-              maxLength={100}
-            />
+            <Input id="nome" value={form.nome} onChange={(e) => handleChange("nome", e.target.value)} placeholder="Nome do apoiador" maxLength={100} />
             {errors.nome && <p className="text-sm text-destructive">{errors.nome}</p>}
           </div>
 
@@ -305,62 +254,48 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="telefone">Telefone</Label>
-              <Input
-                id="telefone"
-                value={form.telefone}
-                onChange={(e) => handleMaskedChange("telefone", e.target.value, maskPhone)}
-                placeholder="(77) 99999-0000"
-                maxLength={15}
-              />
+              <Input id="telefone" value={form.telefone} onChange={(e) => handleMaskedChange("telefone", e.target.value, maskPhone)} placeholder="(77) 99999-0000" maxLength={15} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                placeholder="email@exemplo.com"
-                maxLength={255}
-              />
+              <Input id="email" type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="email@exemplo.com" maxLength={255} />
               {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
           </div>
 
-          {/* Função Política */}
-          <div className="space-y-2">
-            <Label htmlFor="funcao_politica">Função Política</Label>
-            <Select
-              value={form.funcao_politica}
-              onValueChange={(value) => handleChange("funcao_politica", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a função política" />
-              </SelectTrigger>
-              <SelectContent>
-                {FUNCOES_POLITICAS.map((funcao) => (
-                  <SelectItem key={funcao} value={funcao}>
-                    {funcao}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Função Política + CPF */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="funcao_politica">Função Política</Label>
+              <Select value={form.funcao_politica} onValueChange={(value) => handleChange("funcao_politica", value)}>
+                <SelectTrigger><SelectValue placeholder="Selecione a função política" /></SelectTrigger>
+                <SelectContent>
+                  {FUNCOES_POLITICAS.map((funcao) => (<SelectItem key={funcao} value={funcao}>{funcao}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cpf">CPF</Label>
+              <Input id="cpf" value={form.cpf} onChange={(e) => handleMaskedChange("cpf", e.target.value, maskCPF)} placeholder="000.000.000-00" maxLength={14} />
+              {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+            </div>
           </div>
 
-          {/* CPF */}
+          {/* Endereço (Google Places autocomplete) */}
           <div className="space-y-2">
-            <Label htmlFor="cpf">CPF</Label>
+            <Label htmlFor="endereco">Endereço</Label>
             <Input
-              id="cpf"
-              value={form.cpf}
-              onChange={(e) => handleMaskedChange("cpf", e.target.value, maskCPF)}
-              placeholder="000.000.000-00"
-              maxLength={14}
+              id="endereco"
+              ref={enderecoInputRef}
+              value={form.endereco}
+              onChange={(e) => handleChange("endereco", e.target.value)}
+              placeholder="Digite o endereço completo"
+              maxLength={200}
             />
-            {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+            <p className="text-xs text-muted-foreground">Comece a digitar para sugestões do Google Maps</p>
           </div>
 
-          {/* Cidade + Estado (IBGE autocomplete) */}
+          {/* Cidade (IBGE) + UF */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2 relative md:col-span-2">
               <Label htmlFor="cidade">Cidade</Label>
@@ -374,17 +309,9 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
                 maxLength={100}
               />
               {ibge.isOpen && (
-                <div
-                  ref={suggestionsRef}
-                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto"
-                >
+                <div ref={suggestionsRef} className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
                   {ibge.suggestions.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                      onClick={() => handleSelectMunicipio(s)}
-                    >
+                    <button key={s.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors" onClick={() => handleSelectMunicipio(s)}>
                       {s.nome} <span className="text-muted-foreground">— {s.uf}</span>
                     </button>
                   ))}
@@ -393,88 +320,38 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="estado">UF</Label>
-              <Input
-                id="estado"
-                value={form.estado}
-                onChange={(e) => handleChange("estado", e.target.value.toUpperCase())}
-                placeholder="BA"
-                maxLength={2}
-                readOnly
-                className="bg-muted"
-              />
+              <Input id="estado" value={form.estado} readOnly className="bg-muted" placeholder="UF" maxLength={2} />
             </div>
           </div>
 
-          {/* CEP (opcional) + Endereço */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Bairro + CEP */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="bairro">Bairro</Label>
+              <Input id="bairro" value={form.bairro} onChange={(e) => handleChange("bairro", e.target.value)} placeholder="Bairro" maxLength={100} />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="cep">CEP <span className="text-muted-foreground text-xs">(opcional)</span></Label>
               <div className="flex gap-2">
-                <Input
-                  id="cep"
-                  value={form.cep}
-                  onChange={(e) => handleMaskedChange("cep", e.target.value, maskCEP)}
-                  onKeyDown={handleCepKeyDown}
-                  placeholder="47800-000"
-                  maxLength={9}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={lookupCEP}
-                  disabled={cepLoading || !form.cep}
-                  title="Buscar CEP"
-                >
+                <Input id="cep" value={form.cep} onChange={(e) => handleMaskedChange("cep", e.target.value, maskCEP)} onKeyDown={handleCepKeyDown} placeholder="47800-000" maxLength={9} className="flex-1" />
+                <Button type="button" variant="outline" size="icon" onClick={lookupCEP} disabled={cepLoading || !form.cep} title="Buscar CEP">
                   {cepLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="endereco">Endereço</Label>
-              <Input
-                id="endereco"
-                value={form.endereco}
-                onChange={(e) => handleChange("endereco", e.target.value)}
-                placeholder="Rua, número, complemento"
-                maxLength={200}
-              />
-            </div>
-          </div>
-
-          {/* Bairro */}
-          <div className="space-y-2">
-            <Label htmlFor="bairro">Bairro</Label>
-            <Input
-              id="bairro"
-              value={form.bairro}
-              onChange={(e) => handleChange("bairro", e.target.value)}
-              placeholder="Bairro"
-              maxLength={100}
-            />
           </div>
 
           {/* Observação */}
           <div className="space-y-2">
             <Label htmlFor="observacao">Observação / Histórico</Label>
-            <Textarea
-              id="observacao"
-              value={form.observacao}
-              onChange={(e) => handleChange("observacao", e.target.value)}
-              placeholder="Anotações, histórico ou observações sobre esta pessoa..."
-              maxLength={2000}
-              rows={3}
-            />
+            <Textarea id="observacao" value={form.observacao} onChange={(e) => handleChange("observacao", e.target.value)} placeholder="Anotações sobre esta pessoa..." maxLength={2000} rows={3} />
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={saving} variant="campaign">
               {saving ? "Salvando..." : "Cadastrar Apoiador"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancelar
-            </Button>
+            <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
           </div>
         </form>
       </CardContent>
