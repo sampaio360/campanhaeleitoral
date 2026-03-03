@@ -1198,6 +1198,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_access_control: {
+        Row: {
+          allowed: boolean
+          campanha_id: string
+          created_at: string
+          id: string
+          route: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          campanha_id: string
+          created_at?: string
+          id?: string
+          route: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          campanha_id?: string
+          created_at?: string
+          id?: string
+          route?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_access_control_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_campanhas: {
         Row: {
           campanha_id: string

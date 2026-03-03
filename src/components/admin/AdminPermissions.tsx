@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, Lock } from "lucide-react";
+import { ShieldCheck, Lock, UserCog } from "lucide-react";
 import { AdminRoleAssignment } from "./AdminRoleAssignment";
 import { AdminAccessControl } from "./AdminAccessControl";
+import { AdminUserAccessControl } from "./AdminUserAccessControl";
 
 export function AdminPermissions() {
   return (
@@ -13,7 +14,11 @@ export function AdminPermissions() {
         </TabsTrigger>
         <TabsTrigger value="access" className="gap-2">
           <Lock className="w-4 h-4" />
-          Controle de Acesso
+          Por Função
+        </TabsTrigger>
+        <TabsTrigger value="user-access" className="gap-2">
+          <UserCog className="w-4 h-4" />
+          Por Usuário
         </TabsTrigger>
       </TabsList>
 
@@ -23,6 +28,10 @@ export function AdminPermissions() {
 
       <TabsContent value="access">
         <AdminAccessControl />
+      </TabsContent>
+
+      <TabsContent value="user-access">
+        <AdminUserAccessControl />
       </TabsContent>
     </Tabs>
   );

@@ -9,11 +9,16 @@ interface AccessControlRow {
   allowed: boolean;
 }
 
+interface UserAccessControlRow {
+  route: string;
+  allowed: boolean;
+}
+
 export function useAccessControl() {
   const { user, userRoles, campanhaId, selectedCampanhaId, isMaster } = useAuth();
   const effectiveCampanhaId = selectedCampanhaId || campanhaId;
 
-  const { data: rules, isLoading } = useQuery({
+  const { data: rules, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['access-control', effectiveCampanhaId, user?.id],
     queryFn: async () => {
       if (!effectiveCampanhaId) return [];
@@ -28,6 +33,22 @@ export function useAccessControl() {
     staleTime: 30_000,
   });
 
+  const { data: userRules, isLoading: isLoadingUser } = useQuery({
+    queryKey: ['user-access-control', effectiveCampanhaId, user?.id],
+    queryFn: async () => {
+      if (!effectiveCampanhaId || !user) return [];
+      const { data, error } = await supabase
+        .from('user_access_control')
+        .select('route, allowed')
+        .eq('campanha_id', effectiveCampanhaId)
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return (data || []) as UserAccessControlRow[];
+    },
+    enabled: !!user && !!effectiveCampanhaId,
+    staleTime: 30_000,
+  });
+
   // Default denials per role when no access_control rules exist
   const DEFAULT_DENIED: Record<string, string[]> = {
     supporter: ['/budget', '/expenses', '/settings', '/admin', '/roi'],
@@ -36,19 +57,24 @@ export function useAccessControl() {
   };
 
   const canAccess = useCallback((route: string): boolean => {
-    // Master always has access
+    // 1. Master always has access
     if (isMaster) return true;
 
     // Normalize route: /budget/123 -> /budget
     const normalizedRoute = '/' + route.split('/').filter(Boolean)[0];
 
-    // Check access_control table rules first (source of truth)
+    // 2. User-level override (highest priority after master)
+    if (userRules && userRules.length > 0) {
+      const userRule = userRules.find(r => r.route === route || r.route === normalizedRoute);
+      if (userRule) return userRule.allowed;
+    }
+
+    // 3. Role-based access_control rules
     if (rules && rules.length > 0) {
       for (const role of userRoles) {
         const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
         if (rule) {
           if (rule.allowed) return true;
-          // explicitly denied — continue checking other roles
           continue;
         }
         // No rule for this role+route: check default denials
@@ -56,7 +82,6 @@ export function useAccessControl() {
         if (!denied || !denied.includes(normalizedRoute)) return true;
       }
 
-      // All roles either explicitly denied or default-denied
       const hasAnyExplicitAllow = userRoles.some(role => {
         const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
         return rule?.allowed;
@@ -64,14 +89,14 @@ export function useAccessControl() {
       return hasAnyExplicitAllow;
     }
 
-    // No rules in access_control — apply default denials
+    // 4. No rules — apply default denials
     for (const role of userRoles) {
       const denied = DEFAULT_DENIED[role];
       if (!denied || !denied.includes(normalizedRoute)) return true;
     }
 
     return false;
-  }, [rules, userRoles, isMaster]);
+  }, [rules, userRules, userRoles, isMaster]);
 
-  return { canAccess, isLoading };
+  return { canAccess, isLoading: isLoadingRoles || isLoadingUser };
 }
