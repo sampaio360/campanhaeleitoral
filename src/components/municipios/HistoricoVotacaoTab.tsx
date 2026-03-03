@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Search, Vote } from "lucide-react";
+import { Plus, Trash2, Search, Vote, Save, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -15,12 +15,27 @@ interface Props {
   campanhaId: string;
 }
 
+interface LinhaVoto {
+  municipio_id: string;
+  votacao: string;
+}
+
 export function HistoricoVotacaoTab({ campanhaId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ eleicao_id: "", municipio_id: "", votacao: "" });
   const [search, setSearch] = useState("");
+
+  // Batch insert state
+  const [selectedEleicaoId, setSelectedEleicaoId] = useState("");
+  const [linhas, setLinhas] = useState<LinhaVoto[]>([]);
+  const isInserting = !!selectedEleicaoId;
+
+  const addLinha = () => setLinhas(prev => [...prev, { municipio_id: "", votacao: "" }]);
+  const removeLinha = (idx: number) => setLinhas(prev => prev.filter((_, i) => i !== idx));
+  const updateLinha = (idx: number, field: keyof LinhaVoto, value: string) =>
+    setLinhas(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
+
+  const cancelInsertion = () => { setSelectedEleicaoId(""); setLinhas([]); };
 
   // Fetch elections
   const { data: eleicoes } = useQuery({
@@ -32,9 +47,7 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
         .eq("campanha_id", campanhaId)
         .order("eleicao_ano", { ascending: false });
       if (error) throw error;
-      return data as Array<{
-        id: string; eleicao_ano: number; cargo: string;
-      }>;
+      return data as Array<{ id: string; eleicao_ano: number; cargo: string }>;
     },
   });
 
@@ -43,22 +56,19 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
     queryKey: ["municipios", campanhaId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("municipios")
-        .select("id, nome, estado")
-        .eq("campanha_id", campanhaId)
-        .order("nome");
+        .from("municipios").select("id, nome, estado")
+        .eq("campanha_id", campanhaId).order("nome");
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch historico with joins
+  // Fetch historico
   const { data: historico, isLoading } = useQuery({
     queryKey: ["historico-votacao", campanhaId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("municipio_historico_votacao")
-        .select("*")
+        .from("municipio_historico_votacao").select("*")
         .eq("campanha_id", campanhaId)
         .order("eleicao_ano", { ascending: false });
       if (error) throw error;
@@ -66,15 +76,12 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
     },
   });
 
-  // Enrich historico with names
   const enriched = (historico || []).map(h => {
     const mun = municipios?.find(m => m.id === h.municipio_id);
-    const el = eleicoes?.find(e => e.id === (h as any).eleicao_id);
     return {
       ...h,
       municipio_nome: mun?.nome || "—",
       municipio_estado: mun?.estado || "",
-      eleicao_label: el ? `${el.eleicao_ano} — ${el.cargo}` : `${h.eleicao_ano} — ${h.cargo}`,
     };
   });
 
@@ -84,29 +91,33 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
     h.eleicao_ano.toString().includes(search)
   );
 
-  const addMutation = useMutation({
+  // Batch save
+  const saveBatchMutation = useMutation({
     mutationFn: async () => {
-      const eleicao = eleicoes?.find(e => e.id === form.eleicao_id);
-      if (!eleicao) throw new Error("Selecione uma eleição");
-      const { error } = await supabase.from("municipio_historico_votacao").insert({
+      const eleicao = eleicoes?.find(e => e.id === selectedEleicaoId);
+      if (!eleicao) throw new Error("Eleição não encontrada");
+      const validLinhas = linhas.filter(l => l.municipio_id && l.votacao);
+      if (!validLinhas.length) throw new Error("Adicione pelo menos um registro");
+      const rows = validLinhas.map(l => ({
         campanha_id: campanhaId,
-        municipio_id: form.municipio_id,
+        municipio_id: l.municipio_id,
         eleicao_ano: eleicao.eleicao_ano,
         cargo: eleicao.cargo,
-        votacao: parseInt(form.votacao),
-        eleicao_id: form.eleicao_id,
-      } as any);
+        votacao: parseInt(l.votacao),
+        eleicao_id: selectedEleicaoId,
+      }));
+      const { error } = await supabase.from("municipio_historico_votacao").insert(rows as any);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["historico-votacao", campanhaId] });
-      toast({ title: "Votação registrada!" });
-      setForm({ eleicao_id: "", municipio_id: "", votacao: "" });
-      setShowForm(false);
+      toast({ title: `${linhas.filter(l => l.municipio_id && l.votacao).length} registro(s) salvos!` });
+      cancelInsertion();
     },
     onError: (err: any) => toast({ title: "Erro", description: err?.message, variant: "destructive" }),
   });
 
+  // Delete single
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("municipio_historico_votacao").delete().eq("id", id);
@@ -119,6 +130,11 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
     onError: () => toast({ title: "Erro ao remover", variant: "destructive" }),
   });
 
+  // Municípios already used in current batch (to avoid duplicates)
+  const usedMunicipioIds = new Set(linhas.map(l => l.municipio_id).filter(Boolean));
+
+  const validCount = linhas.filter(l => l.municipio_id && l.votacao).length;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -128,54 +144,86 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
             <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
             <span className="text-sm text-muted-foreground ml-auto">{filtered.length} registro(s)</span>
           </div>
-          {!showForm && (
-            <Button size="sm" onClick={() => setShowForm(true)} disabled={!eleicoes?.length || !municipios?.length}>
-              <Plus className="w-4 h-4 mr-2" /> Nova Votação
+          {!isInserting && (
+            <Button size="sm" onClick={() => { setSelectedEleicaoId(""); setLinhas([]); setSelectedEleicaoId("pick"); }}
+              disabled={!eleicoes?.length || !municipios?.length}>
+              <Plus className="w-4 h-4 mr-2" /> Lançar Votação
             </Button>
           )}
         </div>
       </CardHeader>
       <CardContent>
-        {showForm && (
-          <div className="border rounded-lg p-4 space-y-3 bg-muted/30 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Eleição *</Label>
-                <Select value={form.eleicao_id} onValueChange={v => setForm(f => ({ ...f, eleicao_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {eleicoes?.map(el => (
-                      <SelectItem key={el.id} value={el.id}>{el.eleicao_ano} — {el.cargo}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Município *</Label>
-                <Select value={form.municipio_id} onValueChange={v => setForm(f => ({ ...f, municipio_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {municipios?.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.nome} — {m.estado}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Votação *</Label>
-                <Input type="number" placeholder="12500" value={form.votacao}
-                  onChange={e => setForm(f => ({ ...f, votacao: e.target.value }))} />
-              </div>
+        {(!eleicoes?.length || !municipios?.length) && !isLoading && (
+          <p className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 mb-4">
+            {!eleicoes?.length ? "Cadastre uma eleição na aba 'Eleições' primeiro. " : ""}
+            {!municipios?.length ? "Cadastre municípios na aba 'Municípios' primeiro." : ""}
+          </p>
+        )}
+
+        {/* Batch insertion area */}
+        {isInserting && (
+          <div className="border rounded-lg p-4 space-y-4 bg-muted/30 mb-4">
+            {/* Step 1: choose election */}
+            <div className="space-y-1 max-w-sm">
+              <Label className="text-xs font-semibold">Eleição *</Label>
+              <Select value={selectedEleicaoId === "pick" ? "" : selectedEleicaoId}
+                onValueChange={v => { setSelectedEleicaoId(v); setLinhas([{ municipio_id: "", votacao: "" }]); }}>
+                <SelectTrigger><SelectValue placeholder="Selecione a eleição" /></SelectTrigger>
+                <SelectContent>
+                  {eleicoes?.map(el => (
+                    <SelectItem key={el.id} value={el.id}>{el.eleicao_ano} — {el.cargo}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setForm({ eleicao_id: "", municipio_id: "", votacao: "" }); }}>
-                Cancelar
-              </Button>
-              <Button size="sm" disabled={addMutation.isPending || !form.eleicao_id || !form.municipio_id || !form.votacao}
-                onClick={() => addMutation.mutate()}>
-                {addMutation.isPending ? "Salvando..." : "Registrar"}
-              </Button>
-            </div>
+
+            {/* Step 2: add municipio+votacao lines */}
+            {selectedEleicaoId && selectedEleicaoId !== "pick" && (
+              <>
+                <div className="space-y-2">
+                  {linhas.map((linha, idx) => (
+                    <div key={idx} className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1">
+                        {idx === 0 && <Label className="text-xs">Município</Label>}
+                        <Select value={linha.municipio_id}
+                          onValueChange={v => updateLinha(idx, "municipio_id", v)}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            {municipios?.filter(m => !usedMunicipioIds.has(m.id) || m.id === linha.municipio_id)
+                              .map(m => (
+                                <SelectItem key={m.id} value={m.id}>{m.nome} — {m.estado}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-32 space-y-1">
+                        {idx === 0 && <Label className="text-xs">Votação</Label>}
+                        <Input type="number" placeholder="12500" value={linha.votacao}
+                          onChange={e => updateLinha(idx, "votacao", e.target.value)} />
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"
+                        onClick={() => removeLinha(idx)} disabled={linhas.length === 1}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Button variant="outline" size="sm" onClick={addLinha}>
+                    <Plus className="w-4 h-4 mr-1" /> Mais município
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={cancelInsertion}>Cancelar</Button>
+                    <Button size="sm" disabled={saveBatchMutation.isPending || validCount === 0}
+                      onClick={() => saveBatchMutation.mutate()}>
+                      <Save className="w-4 h-4 mr-1" />
+                      {saveBatchMutation.isPending ? "Salvando..." : `Salvar ${validCount} registro(s)`}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -198,7 +246,6 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Eleição</TableHead>
                   <TableHead>Ano</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Município</TableHead>
@@ -210,7 +257,6 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
               <TableBody>
                 {filtered.map(h => (
                   <TableRow key={h.id}>
-                    <TableCell className="text-sm text-muted-foreground">{h.eleicao_label}</TableCell>
                     <TableCell className="font-medium">{h.eleicao_ano}</TableCell>
                     <TableCell>{h.cargo}</TableCell>
                     <TableCell className="font-medium">{h.municipio_nome}</TableCell>
