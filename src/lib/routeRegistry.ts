@@ -27,18 +27,6 @@ export const ROUTE_REGISTRY: RouteEntry[] = [
   { id: "reports", label: "Relatórios", route: "/reports" },
   { id: "historico", label: "Histórico", route: "/historico" },
   { id: "roi", label: "ROI", route: "/roi" },
-  {
-    id: "admin", label: "Administrador", route: "/admin",
-    children: [
-      { id: "admin-users", label: "Usuários", route: "/admin?tab=users" },
-      { id: "admin-permissions", label: "Permissões", route: "/admin?tab=permissions" },
-      { id: "admin-campanhas", label: "Campanhas", route: "/admin?tab=campanhas" },
-      { id: "admin-access", label: "Acesso", route: "/admin?tab=access" },
-      { id: "admin-vinculos", label: "Vínculos", route: "/admin?tab=vinculos" },
-      { id: "admin-hierarchy", label: "Hierarquia", route: "/admin?tab=hierarchy" },
-      { id: "admin-external", label: "Form Externo", route: "/admin?tab=external-form" },
-    ],
-  },
 ];
 
 export const ALL_ROLES: AppRole[] = [
