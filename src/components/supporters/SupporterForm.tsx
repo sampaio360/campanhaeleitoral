@@ -13,6 +13,7 @@ import { geocodeAddress } from "@/lib/geocode";
 import { z } from "zod";
 
 const FUNCOES_POLITICAS = [
+  "Prefeito(a)",
   "Vereador(a)",
   "Presidente de Bairro",
   "Líder Comunitário",

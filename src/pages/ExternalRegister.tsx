@@ -11,7 +11,7 @@ import { z } from "zod";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const FUNCOES_POLITICAS = [
-  "Vereador(a)", "Presidente de Bairro", "Líder Comunitário",
+  "Prefeito(a)", "Vereador(a)", "Presidente de Bairro", "Líder Comunitário",
   "Coordenador(a) de Campanha", "Cabo Eleitoral", "Assessor(a) Político",
   "Militante", "Simpatizante", "Outros",
 ];
