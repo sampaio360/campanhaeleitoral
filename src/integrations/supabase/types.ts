@@ -449,7 +449,6 @@ export type Database = {
           created_at: string
           eleicao_ano: number
           id: string
-          municipio_id: string
           notes: string | null
           updated_at: string
         }
@@ -459,7 +458,6 @@ export type Database = {
           created_at?: string
           eleicao_ano: number
           id?: string
-          municipio_id: string
           notes?: string | null
           updated_at?: string
         }
@@ -469,7 +467,6 @@ export type Database = {
           created_at?: string
           eleicao_ano?: number
           id?: string
-          municipio_id?: string
           notes?: string | null
           updated_at?: string
         }
@@ -479,13 +476,6 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "campanhas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "municipio_eleicoes_municipio_id_fkey"
-            columns: ["municipio_id"]
-            isOneToOne: false
-            referencedRelation: "municipios"
             referencedColumns: ["id"]
           },
         ]
