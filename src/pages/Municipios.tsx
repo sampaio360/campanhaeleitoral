@@ -190,7 +190,7 @@ const Municipios = () => {
           </TabsList>
 
           {/* ── Municípios Tab ── */}
-          <TabsContent value="municipios">
+          <TabsContent value="municipios" forceMount>
             <div className="flex justify-end mb-4">
               <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
                 <DialogTrigger asChild>
