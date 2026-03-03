@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ const supporterSchema = z.object({
   cep: z.string().trim().max(10).optional().or(z.literal("")),
   cpf: z.string().trim().max(14).optional().or(z.literal("")),
   funcao_politica: z.string().trim().max(100).optional().or(z.literal("")),
+  observacao: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
 type SupporterFormData = z.infer<typeof supporterSchema>;
@@ -53,6 +55,7 @@ const initialForm: SupporterFormData = {
   cep: "",
   cpf: "",
   funcao_politica: "",
+  observacao: "",
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
@@ -104,6 +107,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         cpf: data.cpf || null,
         foto_url: fotoUrl,
         funcao_politica: data.funcao_politica || null,
+        observacao: data.observacao || null,
       } as any);
 
       if (error) throw error;
@@ -267,6 +271,19 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
                 maxLength={10}
               />
             </div>
+          </div>
+
+          {/* Observação */}
+          <div className="space-y-2">
+            <Label htmlFor="observacao">Observação / Histórico</Label>
+            <Textarea
+              id="observacao"
+              value={form.observacao}
+              onChange={(e) => handleChange("observacao", e.target.value)}
+              placeholder="Anotações, histórico ou observações sobre esta pessoa..."
+              maxLength={2000}
+              rows={3}
+            />
           </div>
 
           <div className="flex gap-2 pt-2">
