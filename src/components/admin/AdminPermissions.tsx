@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ export function AdminPermissions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState<AppRole>("supporter");
+  const { isMaster } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -199,14 +201,14 @@ export function AdminPermissions() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="supporter">Apoiador</SelectItem>
-                    <SelectItem value="supervisor">Supervisor de Área</SelectItem>
-                    <SelectItem value="coordinator">Coordenador Geral</SelectItem>
-                    <SelectItem value="candidate">Candidato</SelectItem>
-                    <SelectItem value="admin">Administrador de Sistema</SelectItem>
-                    <SelectItem value="master">Master (Desenvolvedor)</SelectItem>
-                  </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="supporter">Apoiador</SelectItem>
+                      <SelectItem value="supervisor">Supervisor de Área</SelectItem>
+                      <SelectItem value="coordinator">Coordenador Geral</SelectItem>
+                      <SelectItem value="candidate">Candidato</SelectItem>
+                      {isMaster && <SelectItem value="admin">Administrador de Sistema</SelectItem>}
+                      {isMaster && <SelectItem value="master">Master (Desenvolvedor)</SelectItem>}
+                    </SelectContent>
                 </Select>
               </div>
             </div>
