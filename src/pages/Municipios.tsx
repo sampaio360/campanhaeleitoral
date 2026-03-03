@@ -298,8 +298,8 @@ const Municipios = () => {
                         <TableRow>
                           <TableHead>Município</TableHead>
                           <TableHead>UF</TableHead>
-                          <TableHead className="hidden sm:table-cell">População</TableHead>
-                          <TableHead className="hidden md:table-cell">Meta Votos</TableHead>
+                          <TableHead>População</TableHead>
+                          <TableHead>Meta Votos</TableHead>
                           <TableHead>Prioridade</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
@@ -310,8 +310,8 @@ const Municipios = () => {
                           <TableRow key={m.id}>
                             <TableCell className="font-medium">{m.nome}</TableCell>
                             <TableCell>{m.estado}</TableCell>
-                            <TableCell className="hidden sm:table-cell">{m.populacao?.toLocaleString("pt-BR") || "—"}</TableCell>
-                            <TableCell className="hidden md:table-cell">{m.meta_votos?.toLocaleString("pt-BR") || "—"}</TableCell>
+                            <TableCell>{m.populacao?.toLocaleString("pt-BR") || "—"}</TableCell>
+                            <TableCell>{m.meta_votos?.toLocaleString("pt-BR") || "—"}</TableCell>
                             <TableCell>{getPrioridadeBadge(m.prioridade || "media")}</TableCell>
                             <TableCell>
                               <Badge variant={m.status === "ativo" ? "secondary" : "outline"}>{m.status}</Badge>
