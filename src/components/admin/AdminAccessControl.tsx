@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Lock, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Lock, ChevronRight, CheckSquare, Square } from "lucide-react";
 import { ROUTE_REGISTRY, ALL_ROLES, ROLE_LABELS, RouteEntry } from "@/lib/routeRegistry";
 import { Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
@@ -59,11 +60,46 @@ export function AdminAccessControl() {
     },
   });
 
+  const bulkMutation = useMutation({
+    mutationFn: async (rows: { role: AppRole; route: string; allowed: boolean }[]) => {
+      if (!effectiveCampanhaId) throw new Error('Nenhuma campanha selecionada');
+      const payload = rows.map(r => ({ campanha_id: effectiveCampanhaId, ...r }));
+      const { error } = await supabase
+        .from('access_control')
+        .upsert(payload, { onConflict: 'campanha_id,role,route' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['access-control-matrix', effectiveCampanhaId] });
+      queryClient.invalidateQueries({ queryKey: ['access-control'] });
+    },
+  });
+
+  const allRoutes = useMemo(() => {
+    const routes: string[] = [];
+    ROUTE_REGISTRY.forEach(mod => {
+      routes.push(mod.route);
+      mod.children?.forEach(child => routes.push(child.route));
+    });
+    return routes;
+  }, []);
+
   const isAllowed = (role: AppRole, route: string): boolean => {
     if (!rules) return true;
     const rule = rules.find(r => r.role === role && r.route === route);
     return rule ? rule.allowed : true;
   };
+
+  const isAllChecked = useCallback((role: AppRole): boolean => {
+    return allRoutes.every(route => isAllowed(role, route));
+  }, [allRoutes, rules]);
+
+  const toggleAllForRole = useCallback((role: AppRole) => {
+    const allChecked = isAllChecked(role);
+    const newAllowed = !allChecked;
+    const rows = allRoutes.map(route => ({ role, route, allowed: newAllowed }));
+    bulkMutation.mutate(rows);
+  }, [allRoutes, isAllChecked, bulkMutation]);
 
   const toggleAccess = (role: AppRole, route: string) => {
     const current = isAllowed(role, route);
@@ -136,8 +172,21 @@ export function AdminAccessControl() {
                 Módulo / Página
               </th>
               {visibleRoles.map(role => (
-                <th key={role} className="py-2 px-3 text-center font-semibold border-b-2 border-border min-w-[90px] text-xs">
-                  {ROLE_LABELS[role]}
+                <th key={role} className="py-2 px-3 text-center border-b-2 border-border min-w-[90px]">
+                  <span className="text-xs font-semibold block mb-1">{ROLE_LABELS[role]}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                    onClick={() => toggleAllForRole(role)}
+                    disabled={bulkMutation.isPending || upsertMutation.isPending}
+                  >
+                    {isAllChecked(role) ? (
+                      <><Square className="w-3 h-3 mr-1" />Desmarcar</>
+                    ) : (
+                      <><CheckSquare className="w-3 h-3 mr-1" />Marcar</>
+                    )}
+                  </Button>
                 </th>
               ))}
             </tr>
