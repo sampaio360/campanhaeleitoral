@@ -370,6 +370,7 @@ export function AdminUsers() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Campanha</TableHead>
               <TableHead>PIN</TableHead>
               <TableHead>Funções</TableHead>
               <TableHead>Criado em</TableHead>
@@ -381,6 +382,15 @@ export function AdminUsers() {
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell className="text-muted-foreground">{user.email || '—'}</TableCell>
+                <TableCell>
+                  {user.campanha_id ? (
+                    <Badge variant="outline">
+                      {campanhas?.find(c => c.id === user.campanha_id)?.nome || '—'}
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   {user.pin ? (
                     <div className="flex items-center gap-1">
