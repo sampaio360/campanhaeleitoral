@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIBGEMunicipios, fetchPopulacao } from "@/hooks/useIBGEMunicipios";
 
 const ESTADOS_BR = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -44,112 +45,40 @@ const Municipios = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MunicipioForm>(emptyForm);
-  const [search, setSearch] = useState("");
-  const nomeInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const [searchTable, setSearchTable] = useState("");
 
-  // Setup Google Places autocomplete for city search
+  // IBGE autocomplete
+  const ibge = useIBGEMunicipios();
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Close suggestions on outside click
   useEffect(() => {
-    if (!dialogOpen) {
-      autocompleteRef.current = null;
-      return;
-    }
-
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return;
-
-    let cancelled = false;
-
-    function ensureGoogleLoaded(): Promise<void> {
-      return new Promise((resolve) => {
-        if (window.google?.maps?.places) { resolve(); return; }
-
-        // If script tag exists, poll for it
-        const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-        if (existing) {
-          const check = setInterval(() => {
-            if (window.google?.maps?.places) { clearInterval(check); resolve(); }
-          }, 150);
-          return;
-        }
-
-        // Load fresh
-        window.initGooglePlaces = () => resolve();
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGooglePlaces&loading=async`;
-        script.async = true;
-        document.head.appendChild(script);
-      });
-    }
-
-    ensureGoogleLoaded().then(() => {
-      if (cancelled || !nomeInputRef.current || autocompleteRef.current) return;
-
-      // z-index fix
-      if (!document.getElementById("pac-style")) {
-        const style = document.createElement("style");
-        style.id = "pac-style";
-        style.textContent = `.pac-container { z-index: 99999 !important; }`;
-        document.head.appendChild(style);
+    const handler = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        ibge.close();
       }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ibge.close]);
 
-      const ac = new window.google.maps.places.Autocomplete(nomeInputRef.current!, {
-        types: ["(cities)"],
-        componentRestrictions: { country: "br" },
-        fields: ["address_components", "name"],
-      });
+  const handleSelectMunicipio = async (m: { id: number; nome: string; uf: string }) => {
+    setForm(f => ({ ...f, nome: m.nome, estado: m.uf }));
+    ibge.setQuery(m.nome);
+    ibge.close();
 
-      ac.addListener("place_changed", async () => {
-        const place = ac.getPlace();
-        if (!place.address_components) return;
-
-        const getComp = (type: string, short = false) => {
-          const comp = place.address_components.find((c: any) => c.types.includes(type));
-          return short ? comp?.short_name || "" : comp?.long_name || "";
-        };
-
-        const cityName = getComp("administrative_area_level_2") || getComp("locality") || place.name || "";
-        const uf = getComp("administrative_area_level_1", true);
-
-        setForm(f => ({ ...f, nome: cityName, estado: uf }));
-
-        // Fetch population from IBGE API
-        try {
-          const res = await fetch(
-            `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome`
-          );
-          const municipios = await res.json();
-          const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-          const found = municipios.find((m: any) =>
-            normalizar(m.nome) === normalizar(cityName) &&
-            m.microrregiao?.mesorregiao?.UF?.sigla === uf
-          );
-          if (found) {
-            // Get population estimate
-            const popRes = await fetch(
-              `https://servicodados.ibge.gov.br/api/v3/agregados/4714/periodos/-6/variaveis/93?localidades=N6[${found.id}]`
-            );
-            const popData = await popRes.json();
-            const series = popData?.[0]?.resultados?.[0]?.series?.[0]?.serie;
-            if (series) {
-              // Get most recent year
-              const years = Object.keys(series).sort().reverse();
-              const pop = series[years[0]];
-              if (pop && pop !== "...") {
-                setForm(f => ({ ...f, populacao: pop }));
-              }
-            }
-          }
-        } catch (err) {
-          console.warn("IBGE population fetch failed:", err);
-        }
-      });
-
-      autocompleteRef.current = ac;
-    });
-
-    return () => { cancelled = true; };
-  }, [dialogOpen]);
+    // Fetch population
+    const pop = await fetchPopulacao(m.id);
+    if (pop) {
+      setForm(f => ({ ...f, populacao: pop }));
+    }
+  };
 
   const { data: municipios, isLoading } = useQuery({
     queryKey: ["municipios", activeCampanhaId],
@@ -194,8 +123,8 @@ const Municipios = () => {
       closeDialog();
     },
     onError: (err: any) => {
-      const msg = err?.message?.includes("duplicate") 
-        ? "Este município já está cadastrado nesta campanha." 
+      const msg = err?.message?.includes("duplicate")
+        ? "Este município já está cadastrado nesta campanha."
         : err?.message || "Erro ao salvar";
       toast({ title: "Erro", description: msg, variant: "destructive" });
     },
@@ -217,6 +146,8 @@ const Municipios = () => {
     setDialogOpen(false);
     setEditingId(null);
     setForm(emptyForm);
+    ibge.setQuery("");
+    ibge.close();
   };
 
   const openEdit = (m: any) => {
@@ -230,12 +161,13 @@ const Municipios = () => {
       status: m.status,
       notes: m.notes || "",
     });
+    ibge.setQuery(m.nome);
     setDialogOpen(true);
   };
 
   const filtered = municipios?.filter(m =>
-    m.nome.toLowerCase().includes(search.toLowerCase()) ||
-    m.estado.toLowerCase().includes(search.toLowerCase())
+    m.nome.toLowerCase().includes(searchTable.toLowerCase()) ||
+    m.estado.toLowerCase().includes(searchTable.toLowerCase())
   ) || [];
 
   if (!activeCampanhaId) {
@@ -261,7 +193,7 @@ const Municipios = () => {
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingId(null); setForm(emptyForm); }}>
+              <Button onClick={() => { setEditingId(null); setForm(emptyForm); ibge.setQuery(""); }}>
                 <Plus className="w-4 h-4 mr-2" /> Novo Município
               </Button>
             </DialogTrigger>
@@ -271,16 +203,37 @@ const Municipios = () => {
               </DialogHeader>
               <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(); }} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <Label htmlFor="nome">Nome *</Label>
                     <Input
                       id="nome"
-                      ref={nomeInputRef}
-                      value={form.nome}
-                      onChange={e => setForm(f => ({ ...f, nome: e.target.value }))}
+                      ref={inputRef}
+                      value={ibge.query}
+                      onChange={e => {
+                        ibge.setQuery(e.target.value);
+                        setForm(f => ({ ...f, nome: e.target.value }));
+                      }}
                       placeholder="Digite o nome da cidade"
+                      autoComplete="off"
                       required
                     />
+                    {ibge.isOpen && (
+                      <div
+                        ref={suggestionsRef}
+                        className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto"
+                      >
+                        {ibge.suggestions.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onClick={() => handleSelectMunicipio(s)}
+                          >
+                            {s.nome} <span className="text-muted-foreground">— {s.uf}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="estado">Estado *</Label>
@@ -336,8 +289,8 @@ const Municipios = () => {
               <Search className="w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar município..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={searchTable}
+                onChange={e => setSearchTable(e.target.value)}
                 className="max-w-xs"
               />
               <span className="text-sm text-muted-foreground ml-auto">
