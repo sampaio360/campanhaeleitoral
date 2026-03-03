@@ -99,7 +99,7 @@ const Municipios = () => {
         fields: ["address_components", "name"],
       });
 
-      ac.addListener("place_changed", () => {
+      ac.addListener("place_changed", async () => {
         const place = ac.getPlace();
         if (!place.address_components) return;
 
@@ -112,6 +112,37 @@ const Municipios = () => {
         const uf = getComp("administrative_area_level_1", true);
 
         setForm(f => ({ ...f, nome: cityName, estado: uf }));
+
+        // Fetch population from IBGE API
+        try {
+          const res = await fetch(
+            `https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome`
+          );
+          const municipios = await res.json();
+          const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const found = municipios.find((m: any) =>
+            normalizar(m.nome) === normalizar(cityName) &&
+            m.microrregiao?.mesorregiao?.UF?.sigla === uf
+          );
+          if (found) {
+            // Get population estimate
+            const popRes = await fetch(
+              `https://servicodados.ibge.gov.br/api/v3/agregados/4714/periodos/-6/variaveis/93?localidades=N6[${found.id}]`
+            );
+            const popData = await popRes.json();
+            const series = popData?.[0]?.resultados?.[0]?.series?.[0]?.serie;
+            if (series) {
+              // Get most recent year
+              const years = Object.keys(series).sort().reverse();
+              const pop = series[years[0]];
+              if (pop && pop !== "...") {
+                setForm(f => ({ ...f, populacao: pop }));
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("IBGE population fetch failed:", err);
+        }
       });
 
       autocompleteRef.current = ac;
