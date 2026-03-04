@@ -126,13 +126,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchUserRoles(userId),
     ]);
 
-    // For admin users without campanha_id, fetch user_campanhas and auto-select first
+    // Auto-select campanha: if user has exactly 1, select it automatically
     const isAdmin = roles.includes('admin');
     const isMasterRole = roles.includes('master');
-    if ((isAdmin || isMasterRole) && !profileData?.campanha_id) {
-      const campIds = await fetchAdminCampanhas(userId);
-      if (isAdmin && campIds.length > 0 && !selectedCampanhaId) {
-        setSelectedCampanhaId(campIds[0]);
+    if ((isAdmin || isMasterRole) && !profileData?.campanha_id && !selectedCampanhaId) {
+      if (isMasterRole) {
+        const { data } = await supabase.from('campanhas').select('id').is('deleted_at', null);
+        const ids = data?.map(d => d.id) || [];
+        if (ids.length === 1) {
+          setSelectedCampanhaId(ids[0]);
+        }
+      } else if (isAdmin) {
+        const campIds = await fetchAdminCampanhas(userId);
+        if (campIds.length === 1) {
+          setSelectedCampanhaId(campIds[0]);
+        }
       }
     }
   }, [fetchProfile, fetchAdminCampanhas, selectedCampanhaId]);
