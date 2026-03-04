@@ -51,8 +51,8 @@ export function useAccessControl() {
 
   // Default denials per role when no access_control rules exist
   const DEFAULT_DENIED: Record<string, string[]> = {
-    supporter: ['/budget', '/expenses', '/settings', '/admin', '/roi'],
-    political_leader: ['/settings', '/admin', '/roi'],
+    supporter: ['/budget', '/expenses', '/admin', '/roi'],
+    political_leader: ['/admin', '/roi'],
     local_coordinator: ['/admin', '/roi'],
   };
 
