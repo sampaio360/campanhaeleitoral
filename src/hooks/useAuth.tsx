@@ -52,6 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [selectedCampanhaId, setSelectedCampanhaId] = useState<string | null>(null);
+  const [adminCampanhaIds, setAdminCampanhaIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   const fetchUserRoles = async (userId: string) => {
@@ -62,12 +63,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', userId);
 
       if (error) throw error;
-      setUserRoles(data?.map(r => r.role) || []);
+      const roles = data?.map(r => r.role) || [];
+      setUserRoles(roles);
+      return roles;
     } catch (error) {
       console.error('Erro ao buscar roles:', error);
       setUserRoles([]);
+      return [];
     }
   };
+
+  const fetchAdminCampanhas = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_campanhas')
+        .select('campanha_id')
+        .eq('user_id', userId);
+      if (error) throw error;
+      const ids = data?.map(d => d.campanha_id) || [];
+      setAdminCampanhaIds(ids);
+      return ids;
+    } catch {
+      setAdminCampanhaIds([]);
+      return [];
+    }
+  }, []);
 
   const fetchProfile = useCallback(async (userId: string) => {
     setProfileLoading(true);
@@ -80,13 +100,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       setProfile(null);
+      return null;
     } finally {
       setProfileLoading(false);
     }
   }, []);
+
+  const initUser = useCallback(async (userId: string) => {
+    const [profileData, roles] = await Promise.all([
+      fetchProfile(userId),
+      fetchUserRoles(userId),
+    ]);
+
+    // For admin users without campanha_id, fetch user_campanhas and auto-select first
+    const isAdmin = roles.includes('admin');
+    const isMasterRole = roles.includes('master');
+    if ((isAdmin || isMasterRole) && !profileData?.campanha_id) {
+      const campIds = await fetchAdminCampanhas(userId);
+      if (isAdmin && campIds.length > 0 && !selectedCampanhaId) {
+        setSelectedCampanhaId(campIds[0]);
+      }
+    }
+  }, [fetchProfile, fetchAdminCampanhas, selectedCampanhaId]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -97,14 +136,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (currentUser) {
           setTimeout(() => {
-            Promise.all([
-              fetchProfile(currentUser.id),
-              fetchUserRoles(currentUser.id)
-            ]).finally(() => setLoading(false));
+            initUser(currentUser.id).finally(() => setLoading(false));
           }, 0);
         } else {
           setProfile(null);
           setUserRoles([]);
+          setAdminCampanhaIds([]);
           setLoading(false);
         }
       }
@@ -116,17 +153,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(currentUser);
 
       if (currentUser) {
-        Promise.all([
-          fetchProfile(currentUser.id),
-          fetchUserRoles(currentUser.id)
-        ]).finally(() => setLoading(false));
+        initUser(currentUser.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchProfile]);
+  }, [initUser]);
 
   const signUp = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({
@@ -179,8 +213,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signUp,
       signIn,
       signOut,
-      refetchRoles: () => user ? fetchUserRoles(user.id) : Promise.resolve(),
-      refetchProfile: () => user ? fetchProfile(user.id) : Promise.resolve(),
+      refetchRoles: () => user ? fetchUserRoles(user.id).then(() => {}) : Promise.resolve(),
+      refetchProfile: () => user ? fetchProfile(user.id).then(() => {}) : Promise.resolve(),
     }}>
       {children}
     </AuthContext.Provider>

@@ -1820,6 +1820,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_of_campanha: {
+        Args: { _campanha_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
