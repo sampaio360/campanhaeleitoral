@@ -177,7 +177,21 @@ export default function ExternalRegister() {
         throw new Error(res.data?.error || res.error?.message || "Erro ao cadastrar.");
       }
 
-      setSuccess(true);
+      // Auto-login with the credentials just created
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (loginError) {
+        // Login failed but registration succeeded - show success with manual login
+        setSuccess(true);
+        return;
+      }
+
+      // Login successful - redirect to dashboard (PinGate will handle PIN verification)
+      sessionStorage.removeItem("pin_verified");
+      window.location.href = "/dashboard";
     } catch (err: any) {
       setFormErrors({ _general: err.message || "Erro ao cadastrar." });
     } finally {
