@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useIBGEMunicipios } from "@/hooks/useIBGEMunicipios";
 import { z } from "zod";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
@@ -73,6 +74,37 @@ export default function ExternalRegister() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // IBGE autocomplete for cidade
+  const ibge = useIBGEMunicipios();
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const cidadeInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current && !suggestionsRef.current.contains(e.target as Node) &&
+        cidadeInputRef.current && !cidadeInputRef.current.contains(e.target as Node)
+      ) {
+        ibge.close();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ibge.close]);
+
+  const handleSelectMunicipio = (m: { id: number; nome: string; uf: string }) => {
+    setForm(f => ({ ...f, cidade: m.nome, estado: m.uf }));
+    ibge.setQuery(m.nome);
+    ibge.close();
+    if (formErrors.cidade) setFormErrors(prev => ({ ...prev, cidade: "" }));
+    if (formErrors.estado) setFormErrors(prev => ({ ...prev, estado: "" }));
+  };
+
+  const handleCidadeChange = (value: string) => {
+    handleChange("cidade", value);
+    ibge.setQuery(value);
+  };
 
   useEffect(() => {
     if (token) loadInviteAndConfig(token);
@@ -370,15 +402,32 @@ export default function ExternalRegister() {
                     </div>
                   )}
                   {isFieldVisible("cidade") && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                       <Label htmlFor="cidade">Cidade</Label>
-                      <Input id="cidade" value={form.cidade} onChange={(e) => handleChange("cidade", e.target.value)} maxLength={100} />
+                      <Input
+                        id="cidade"
+                        ref={cidadeInputRef}
+                        value={ibge.query || form.cidade}
+                        onChange={(e) => handleCidadeChange(e.target.value)}
+                        placeholder="Digite o nome da cidade"
+                        autoComplete="off"
+                        maxLength={100}
+                      />
+                      {ibge.isOpen && (
+                        <div ref={suggestionsRef} className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
+                          {ibge.suggestions.map((s) => (
+                            <button key={s.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors" onClick={() => handleSelectMunicipio(s)}>
+                              {s.nome} <span className="text-muted-foreground">— {s.uf}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                   {isFieldVisible("estado") && (
                     <div className="space-y-2">
                       <Label htmlFor="estado">UF</Label>
-                      <Input id="estado" value={form.estado} onChange={(e) => handleChange("estado", e.target.value.toUpperCase())} maxLength={2} />
+                      <Input id="estado" value={form.estado} readOnly className="bg-muted" placeholder="UF" maxLength={2} />
                     </div>
                   )}
                   {isFieldVisible("cep") && (
