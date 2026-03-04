@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { useIBGEMunicipios } from "@/hooks/useIBGEMunicipios";
 import {
   CalendarDays, Plus, Search, Loader2, MapPin, Clock, User,
   ChevronLeft, ChevronRight, Megaphone, Users, Mic, Car, Handshake,
@@ -54,6 +55,7 @@ interface Lideranca {
   nome: string;
   funcao_politica: string | null;
   telefone: string | null;
+  cidade: string | null;
 }
 
 /* ───── Config ───── */
@@ -98,7 +100,7 @@ const AgendaPage = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
-  const [liderancas, setLiderancas] = useState<Lideranca[]>([]);
+  const [allLiderancas, setAllLiderancas] = useState<Lideranca[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AgendaEvent | null>(null);
   const [creating, setCreating] = useState(false);
@@ -108,6 +110,9 @@ const AgendaPage = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewTab, setViewTab] = useState("calendario");
+
+  const ibge = useIBGEMunicipios();
+  const cidadeDropdownRef = useRef<HTMLDivElement>(null);
 
   const emptyForm = {
     titulo: "", descricao: "", tipo: "reuniao", data_inicio: "", hora_inicio: "09:00",
@@ -135,8 +140,8 @@ const AgendaPage = () => {
 
     let liderQuery = supabase
       .from("supporters")
-      .select("id, nome, funcao_politica, telefone")
-      .eq("lideranca_politica", true) as any;
+      .select("id, nome, funcao_politica, telefone, cidade") as any;
+    liderQuery = liderQuery.eq("lideranca_politica", true);
     if (activeCampanhaId) liderQuery = liderQuery.eq("campanha_id", activeCampanhaId);
 
     const [evRes, profRes, liderRes] = await Promise.all([
@@ -151,7 +156,7 @@ const AgendaPage = () => {
     const pMap: Record<string, Profile> = {};
     profs.forEach((p) => (pMap[p.id] = p));
     setProfileMap(pMap);
-    setLiderancas((liderRes.data || []) as Lideranca[]);
+    setAllLiderancas((liderRes.data || []) as (Lideranca & { cidade?: string })[]);
     setLoading(false);
   }, [user, activeCampanhaId, isMaster, currentMonth]);
 
@@ -197,6 +202,16 @@ const AgendaPage = () => {
     return list;
   }, [events, selectedDate, filterTipo, filterStatus, searchTerm]);
 
+  /* ───── Filtered lideranças by cidade ───── */
+
+  const normalizar = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const filteredLiderancas = useMemo(() => {
+    if (!form.cidade) return [];
+    const cidadeNorm = normalizar(form.cidade);
+    return allLiderancas.filter((l) => l.cidade && normalizar(l.cidade) === cidadeNorm);
+  }, [form.cidade, allLiderancas]);
+
   /* ───── CRUD ───── */
 
   const openCreate = (date?: Date) => {
@@ -205,12 +220,12 @@ const AgendaPage = () => {
       ...emptyForm,
       data_inicio: date ? format(date, "yyyy-MM-dd") : "",
     });
+    ibge.setQuery("");
     setShowForm(true);
   };
 
   const openEdit = (ev: AgendaEvent) => {
     const start = parseISO(ev.data_inicio);
-    const end = ev.data_fim ? parseISO(ev.data_fim) : null;
     setEditingEvent(ev);
     setForm({
       titulo: ev.titulo,
@@ -225,6 +240,7 @@ const AgendaPage = () => {
       prioridade: ev.prioridade,
       notas: ev.notas || "",
     });
+    ibge.setQuery(ev.cidade || "");
     setShowForm(true);
   };
 
@@ -610,22 +626,48 @@ const AgendaPage = () => {
                   <Label>Local</Label>
                   <Input value={form.local} onChange={(e) => setForm((p) => ({ ...p, local: e.target.value }))} placeholder="Ex: Praça Central" />
                 </div>
-                <div className="space-y-2">
+              <div className="space-y-2 relative">
                   <Label>Cidade</Label>
-                  <Input value={form.cidade} onChange={(e) => setForm((p) => ({ ...p, cidade: e.target.value }))} placeholder="Ex: Recife" />
+                  <Input
+                    value={ibge.query}
+                    onChange={(e) => {
+                      ibge.setQuery(e.target.value);
+                      setForm((p) => ({ ...p, cidade: e.target.value }));
+                    }}
+                    placeholder="Digite para buscar..."
+                  />
+                  {ibge.isOpen && (
+                    <div ref={cidadeDropdownRef} className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {ibge.suggestions.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => {
+                            const val = `${m.nome} - ${m.uf}`;
+                            setForm((p) => ({ ...p, cidade: m.nome }));
+                            ibge.setQuery(val);
+                            ibge.close();
+                          }}
+                        >
+                          {m.nome} <span className="text-muted-foreground">- {m.uf}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Lideranças Políticas */}
-              {liderancas.length > 0 && (
+              {/* Lideranças Políticas filtradas pela cidade */}
+              {filteredLiderancas.length > 0 && (
                 <div className="space-y-3">
                   <Separator />
                   <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     <Crown className="w-4 h-4" />
-                    Lideranças Políticas
+                    Lideranças Políticas {form.cidade && <span className="normal-case font-normal">em {form.cidade}</span>}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {liderancas.map((l) => (
+                    {filteredLiderancas.map((l) => (
                       <div key={l.id} className="flex items-center gap-3 p-2.5 rounded-lg border bg-muted/30">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{l.nome}</p>
