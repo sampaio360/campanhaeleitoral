@@ -135,11 +135,7 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <Building2 className="mr-2 h-4 w-4" />
-                <span className="truncate">
-                  {activeCampanhaId
-                    ? campanhas.find(c => c.id === activeCampanhaId)?.nome || "Campanha"
-                    : "Selecione uma campanha"}
-                </span>
+                <span className="truncate">Selecione uma campanha</span>
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="w-64 max-h-64 overflow-y-auto">
                 {campanhas.map((c) => (
