@@ -5,11 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Phone, Mail, MapPin } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
-import { SupporterForm } from "@/components/supporters/SupporterForm";
+import { SupporterForm, SupporterEditData } from "@/components/supporters/SupporterForm";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Supporter {
   id: string;
@@ -18,6 +22,13 @@ interface Supporter {
   telefone: string | null;
   bairro: string | null;
   cidade: string | null;
+  estado: string | null;
+  endereco: string | null;
+  cep: string | null;
+  cpf: string | null;
+  funcao_politica: string | null;
+  observacao: string | null;
+  foto_url: string | null;
   created_at: string | null;
 }
 
@@ -27,7 +38,9 @@ const Supporters = () => {
   const { toast } = useToast();
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRegisterForm, setShowRegisterForm] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingSupporter, setEditingSupporter] = useState<SupporterEditData | null>(null);
+  const [deletingSupporter, setDeletingSupporter] = useState<Supporter | null>(null);
 
   useEffect(() => {
     fetchSupporters();
@@ -38,15 +51,12 @@ const Supporters = () => {
       setLoading(false);
       return;
     }
-
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('supporters')
-        .select('id, nome, email, telefone, bairro, cidade, created_at')
+        .select('id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, observacao, foto_url, created_at')
+        .eq('campanha_id', effectiveCampanhaId)
         .order('created_at', { ascending: false });
-      query = query.eq('campanha_id', effectiveCampanhaId);
-      const { data, error } = await query;
-
       if (error) {
         toast({ title: "Erro ao carregar apoiadores", description: error.message, variant: "destructive" });
         return;
@@ -57,6 +67,36 @@ const Supporters = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (supporter: Supporter) => {
+    setEditingSupporter(supporter);
+    setShowForm(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingSupporter) return;
+    try {
+      const { error } = await supabase.from('supporters').delete().eq('id', deletingSupporter.id);
+      if (error) throw error;
+      toast({ title: "Pessoa excluída com sucesso" });
+      fetchSupporters();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    } finally {
+      setDeletingSupporter(null);
+    }
+  };
+
+  const handleFormSuccess = () => {
+    fetchSupporters();
+    setShowForm(false);
+    setEditingSupporter(null);
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingSupporter(null);
   };
 
   if (loading) {
@@ -83,16 +123,15 @@ const Supporters = () => {
             <p className="text-sm text-muted-foreground">Gerencie as pessoas vinculadas à campanha</p>
           </div>
           <Button
-            onClick={() => setShowRegisterForm(!showRegisterForm)}
+            onClick={() => { setEditingSupporter(null); setShowForm(!showForm); }}
             variant="campaign"
             className="gap-2 w-full sm:w-auto"
           >
             <UserPlus className="w-4 h-4" />
-            {showRegisterForm ? "Fechar" : "Cadastrar Pessoa"}
+            {showForm && !editingSupporter ? "Fechar" : "Cadastrar Pessoa"}
           </Button>
         </div>
 
-        {/* Estatísticas */}
         <Card className="mb-8">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -107,30 +146,22 @@ const Supporters = () => {
           </CardContent>
         </Card>
 
-        {/* Formulário de cadastro */}
-        {showRegisterForm && (
+        {showForm && (
           <SupporterForm
-            onSuccess={() => {
-              fetchSupporters();
-              setShowRegisterForm(false);
-            }}
-            onCancel={() => setShowRegisterForm(false)}
+            onSuccess={handleFormSuccess}
+            onCancel={handleFormCancel}
+            editData={editingSupporter}
           />
         )}
 
-        {/* Lista */}
         <div className="grid gap-4">
           {supporters.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nenhuma pessoa encontrada</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece cadastrando pessoas na campanha
-                </p>
-                <Button onClick={() => setShowRegisterForm(true)} variant="campaign">
-                  Cadastrar Primeira Pessoa
-                </Button>
+                <p className="text-muted-foreground mb-4">Comece cadastrando pessoas na campanha</p>
+                <Button onClick={() => setShowForm(true)} variant="campaign">Cadastrar Primeira Pessoa</Button>
               </CardContent>
             </Card>
           ) : (
@@ -146,11 +177,19 @@ const Supporters = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-semibold text-sm sm:text-base truncate">{supporter.nome}</h4>
-                        {supporter.created_at && (
-                          <Badge variant="secondary" className="text-xs shrink-0 hidden sm:inline-flex">
-                            {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {supporter.created_at && (
+                            <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+                              {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
+                            </Badge>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(supporter)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingSupporter(supporter)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground mt-1">
                         {supporter.telefone && (
@@ -174,6 +213,23 @@ const Supporters = () => {
           )}
         </div>
       </div>
+
+      <AlertDialog open={!!deletingSupporter} onOpenChange={(open) => { if (!open) setDeletingSupporter(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pessoa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{deletingSupporter?.nome}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

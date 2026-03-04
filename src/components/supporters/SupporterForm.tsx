@@ -75,9 +75,26 @@ const supporterSchema = z.object({
 
 type SupporterFormData = z.infer<typeof supporterSchema>;
 
+export interface SupporterEditData {
+  id: string;
+  nome: string;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: string | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  cpf?: string | null;
+  funcao_politica?: string | null;
+  observacao?: string | null;
+  foto_url?: string | null;
+}
+
 interface SupporterFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  editData?: SupporterEditData | null;
 }
 
 const initialForm: SupporterFormData = {
@@ -85,11 +102,32 @@ const initialForm: SupporterFormData = {
   cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
 };
 
-export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
+export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormProps) {
   const effectiveCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
-  const [form, setForm] = useState<SupporterFormData>(initialForm);
-  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const isEditing = !!editData;
+
+  const buildInitialForm = (): SupporterFormData => {
+    if (!editData) return initialForm;
+    const parts = (editData.endereco || "").split(",").map(s => s.trim());
+    return {
+      nome: editData.nome || "",
+      telefone: editData.telefone ? maskPhone(editData.telefone) : "",
+      email: editData.email || "",
+      rua: parts[0] || "",
+      numero: parts[1] || "",
+      bairro: editData.bairro || "",
+      cidade: editData.cidade || "",
+      estado: editData.estado || "",
+      cep: editData.cep ? maskCEP(editData.cep) : "",
+      cpf: editData.cpf ? maskCPF(editData.cpf) : "",
+      funcao_politica: editData.funcao_politica || "",
+      observacao: editData.observacao || "",
+    };
+  };
+
+  const [form, setForm] = useState<SupporterFormData>(buildInitialForm);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(editData?.foto_url ?? null);
   const [saving, setSaving] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -210,7 +248,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
       const data = result.data;
       const enderecoCompleto = [data.rua, data.numero].filter(Boolean).join(", ");
       const coords = await geocodeAddress({ endereco: enderecoCompleto, bairro: data.bairro, cidade: data.cidade, estado: data.estado, cep: data.cep });
-      const insertPayload: Record<string, any> = {
+      const payload: Record<string, any> = {
         campanha_id: effectiveCampanhaId, nome: data.nome,
         telefone: data.telefone || null, email: data.email || null,
         endereco: enderecoCompleto || null, bairro: data.bairro || null,
@@ -220,16 +258,23 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
         observacao: data.observacao || null,
         latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
       };
-      if (coords) insertPayload.geolocation = `SRID=4326;POINT(${coords.lng} ${coords.lat})`;
-      const { error } = await supabase.from("supporters").insert(insertPayload as any);
-      if (error) throw error;
-      toast({ title: "Pessoa cadastrada!", description: `${data.nome} adicionado(a) com sucesso.` });
+      if (coords) payload.geolocation = `SRID=4326;POINT(${coords.lng} ${coords.lat})`;
+
+      if (isEditing && editData) {
+        const { error } = await supabase.from("supporters").update(payload as any).eq("id", editData.id);
+        if (error) throw error;
+        toast({ title: "Pessoa atualizada!", description: `${data.nome} atualizado(a) com sucesso.` });
+      } else {
+        const { error } = await supabase.from("supporters").insert(payload as any);
+        if (error) throw error;
+        toast({ title: "Pessoa cadastrada!", description: `${data.nome} adicionado(a) com sucesso.` });
+      }
       setForm(initialForm);
       setFotoUrl(null);
       ibge.setQuery("");
       onSuccess();
     } catch (err: any) {
-      toast({ title: "Erro ao cadastrar", description: err.message, variant: "destructive" });
+      toast({ title: isEditing ? "Erro ao atualizar" : "Erro ao cadastrar", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -238,8 +283,8 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Cadastrar Nova Pessoa</CardTitle>
-        <CardDescription>Preencha os dados para registrar na campanha</CardDescription>
+        <CardTitle>{isEditing ? "Editar Pessoa" : "Cadastrar Nova Pessoa"}</CardTitle>
+        <CardDescription>{isEditing ? "Altere os dados e salve" : "Preencha os dados para registrar na campanha"}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -389,7 +434,7 @@ export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
 
           <div className="flex gap-2 pt-2">
             <Button type="submit" disabled={saving} variant="campaign">
-              {saving ? "Salvando..." : "Cadastrar Apoiador"}
+              {saving ? "Salvando..." : isEditing ? "Salvar Alterações" : "Cadastrar Pessoa"}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
           </div>
