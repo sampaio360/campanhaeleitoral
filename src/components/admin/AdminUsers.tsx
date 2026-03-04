@@ -73,7 +73,6 @@ export function AdminUsers() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !isMaster && !!adminCampaignIds?.length,
   });
 
   const { data: users, isLoading: loadingUsers } = useQuery({
@@ -348,13 +347,24 @@ export function AdminUsers() {
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell className="text-muted-foreground">{user.email || '—'}</TableCell>
                 <TableCell>
-                  {user.campanha_id ? (
-                    <Badge variant="outline">
-                      {campanhas?.find(c => c.id === user.campanha_id)?.nome || '—'}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
+                  {(() => {
+                    // Collect all campaign IDs for this user
+                    const campIds = new Set<string>();
+                    if (user.campanha_id) campIds.add(user.campanha_id);
+                    allUserCampanhas?.filter(uc => uc.user_id === user.id).forEach(uc => campIds.add(uc.campanha_id));
+                    
+                    if (campIds.size === 0) return <span className="text-muted-foreground">—</span>;
+                    
+                    return (
+                      <div className="flex gap-1 flex-wrap">
+                        {Array.from(campIds).map(cid => (
+                          <Badge key={cid} variant="outline">
+                            {campanhas?.find(c => c.id === cid)?.nome || '—'}
+                          </Badge>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   {user.pin ? (
