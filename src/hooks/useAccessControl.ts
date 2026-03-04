@@ -60,16 +60,19 @@ export function useAccessControl() {
     // 1. Master always has access
     if (isMaster) return true;
 
+    // 2. If user has no roles, allow access by default (new users)
+    if (!userRoles || userRoles.length === 0) return true;
+
     // Normalize route: /budget/123 -> /budget
     const normalizedRoute = '/' + route.split('/').filter(Boolean)[0];
 
-    // 2. User-level override (highest priority after master)
+    // 3. User-level override (highest priority after master)
     if (userRules && userRules.length > 0) {
       const userRule = userRules.find(r => r.route === route || r.route === normalizedRoute);
       if (userRule) return userRule.allowed;
     }
 
-    // 3. Role-based access_control rules
+    // 4. Role-based access_control rules
     if (rules && rules.length > 0) {
       for (const role of userRoles) {
         const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
@@ -89,13 +92,13 @@ export function useAccessControl() {
       return hasAnyExplicitAllow;
     }
 
-    // 4. No rules — apply default denials
+    // 5. No rules — apply default denials
     for (const role of userRoles) {
       const denied = DEFAULT_DENIED[role];
       if (!denied || !denied.includes(normalizedRoute)) return true;
     }
 
-    return false;
+    return true;
   }, [rules, userRules, userRoles, isMaster]);
 
   return { canAccess, isLoading: isLoadingRoles || isLoadingUser };

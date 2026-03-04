@@ -39,12 +39,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   // Check access control for current route
   const currentPath = location.pathname;
-  if (!canAccess(currentPath)) {
-    toast({
-      title: "Acesso negado",
-      description: "Você não tem permissão para acessar este módulo.",
-      variant: "destructive",
-    });
+  // Skip access check for /modulos to prevent infinite redirects
+  if (currentPath !== "/modulos" && !canAccess(currentPath)) {
     return <Navigate to="/modulos" replace />;
   }
 
