@@ -435,7 +435,14 @@ const AgendaPage = () => {
                     return (
                       <button
                         key={key}
-                        onClick={() => setSelectedDate(selected ? null : day)}
+                        onClick={() => {
+                          if (dayEvents.length > 0) {
+                            setSelectedDate(day);
+                            setViewTab("lista");
+                          } else {
+                            setSelectedDate(selected ? null : day);
+                          }
+                        }}
                         className={`
                           min-h-[80px] md:min-h-[100px] bg-card p-1.5 text-left flex flex-col transition-colors
                           ${!inMonth ? "opacity-40" : ""}
