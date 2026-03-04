@@ -355,11 +355,18 @@ export function AdminUsers() {
                     
                     if (campIds.size === 0) return <span className="text-muted-foreground">—</span>;
                     
+                    // Only show campaigns that exist in the active list
+                    const resolved = Array.from(campIds)
+                      .map(cid => ({ id: cid, nome: campanhas?.find(c => c.id === cid)?.nome }))
+                      .filter(c => !!c.nome);
+                    
+                    if (resolved.length === 0) return <span className="text-muted-foreground">—</span>;
+                    
                     return (
                       <div className="flex gap-1 flex-wrap">
-                        {Array.from(campIds).map(cid => (
-                          <Badge key={cid} variant="outline">
-                            {campanhas?.find(c => c.id === cid)?.nome || '—'}
+                        {resolved.map(c => (
+                          <Badge key={c.id} variant="outline">
+                            {c.nome}
                           </Badge>
                         ))}
                       </div>
