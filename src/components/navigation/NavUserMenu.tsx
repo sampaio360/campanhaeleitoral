@@ -53,18 +53,37 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
   const primaryRole = userRoles[0];
   const roleInfo = primaryRole ? ROLE_LABELS[primaryRole] : null;
 
-  useEffect(() => {
-    if (!isMaster) return;
-    // Master sees all campanhas; RLS already handles filtering for other roles
-    supabase
-      .from("campanhas")
-      .select("id, nome, partido, municipio, uf")
-      .is("deleted_at", null)
-      .order("nome")
-      .then(({ data }) => { if (data) setCampanhas(data); });
-  }, [isMaster]);
+  const isAdmin = userRoles.includes('admin');
+  const showCampaignSelector = isMaster || (isAdmin && !campanhaId);
 
-  const activeCampanhaId = isMaster ? selectedCampanhaId : campanhaId;
+  useEffect(() => {
+    if (!showCampaignSelector) return;
+    if (isMaster) {
+      // Master sees all campanhas
+      supabase
+        .from("campanhas")
+        .select("id, nome, partido, municipio, uf")
+        .is("deleted_at", null)
+        .order("nome")
+        .then(({ data }) => { if (data) setCampanhas(data); });
+    } else if (isAdmin) {
+      // Admin sees campanhas linked via user_campanhas
+      supabase
+        .from("user_campanhas")
+        .select("campanha_id, campanhas:campanha_id(id, nome, partido, municipio, uf)")
+        .eq("user_id", user.id)
+        .then(({ data }) => {
+          if (data) {
+            const mapped = data
+              .map((d: any) => d.campanhas)
+              .filter(Boolean) as Campanha[];
+            setCampanhas(mapped);
+          }
+        });
+    }
+  }, [showCampaignSelector, isMaster, isAdmin, user.id]);
+
+  const activeCampanhaId = showCampaignSelector ? selectedCampanhaId : campanhaId;
 
   return (
     <DropdownMenu>
@@ -103,14 +122,14 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
                   {roleInfo.label}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {isMaster ? "Acesso global" : campanhaId ? "Vinculado" : "Sem campanha"}
+                   {isMaster ? "Acesso global" : (campanhaId || selectedCampanhaId) ? "Vinculado" : "Sem campanha"}
                 </span>
               </div>
             )}
           </div>
         </DropdownMenuLabel>
 
-        {isMaster && (
+        {showCampaignSelector && campanhas.length > 0 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuSub>
