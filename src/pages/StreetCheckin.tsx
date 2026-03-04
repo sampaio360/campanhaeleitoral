@@ -49,7 +49,7 @@ const STATUS_COBERTURA_LABELS: Record<string, { label: string; color: string }> 
 
 const StreetCheckin = () => {
   const { user, campanhaId: profileCampanhaId, isMaster, selectedCampanhaId } = useAuth();
-  const campanhaId = isMaster && selectedCampanhaId ? selectedCampanhaId : profileCampanhaId;
+  const campanhaId = selectedCampanhaId || profileCampanhaId;
   const { toast } = useToast();
   const [streets, setStreets] = useState<Street[]>([]);
   const [checkins, setCheckins] = useState<Checkin[]>([]);

@@ -44,7 +44,7 @@ const emptyForm: MunicipioForm = {
 
 const Municipios = () => {
   const { campanhaId, isMaster, selectedCampanhaId } = useAuth();
-  const activeCampanhaId = isMaster && selectedCampanhaId ? selectedCampanhaId : campanhaId;
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
