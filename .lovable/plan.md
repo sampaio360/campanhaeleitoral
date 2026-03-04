@@ -1,15 +1,24 @@
 
 
-## Plan: Remove duplicate campaign selector from NavActiveCampaign
+## Plan: Fix campaign selector trigger label
 
-**Problem**: `NavActiveCampaign.tsx` has a conditional block (lines 56-78) that renders a `<Select>` dropdown for admins with `adminCampanhas.length > 1`. Only n.neemias triggers this because he has 2+ campaigns linked. Other admins have 1 campaign, so they see the correct badge.
+**Problem**: Line 139-141 in `NavUserMenu.tsx` shows the active campaign's `nome` (e.g., "SIMULADA") when a campaign is selected. The correct behavior, as shown in the screenshot, is to always display "Selecione uma campanha" as the trigger text.
 
-**Fix in `src/components/navigation/NavActiveCampaign.tsx`**:
+**Fix in `src/components/navigation/NavUserMenu.tsx`** (lines 138-142):
 
-1. Remove the `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` imports (line 5)
-2. Remove the `adminCampanhas` state and its fetch `useEffect` (lines 10, 16-33) — no longer needed
-3. Remove the entire conditional block (lines 56-78) that renders the `<Select>` dropdown
-4. Keep the campaign name fetch and the read-only badge display (lines 35-54, 80-96)
+Change from:
+```tsx
+<span className="truncate">
+  {activeCampanhaId
+    ? campanhas.find(c => c.id === activeCampanhaId)?.nome || "Campanha"
+    : "Selecione uma campanha"}
+</span>
+```
 
-After this, all admins (including n.neemias) will see the same clean badge. Campaign switching stays exclusively in `NavUserMenu`.
+To:
+```tsx
+<span className="truncate">Selecione uma campanha</span>
+```
+
+The active campaign is already indicated by the checkmark (✓) next to the selected item in the submenu, and the navbar badge (`NavActiveCampaign`) shows which campaign is active. The trigger label should remain static.
 
