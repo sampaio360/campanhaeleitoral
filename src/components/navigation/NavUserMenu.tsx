@@ -54,10 +54,9 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
   const roleInfo = primaryRole ? ROLE_LABELS[primaryRole] : null;
 
   const isAdmin = userRoles.includes('admin');
-  const showCampaignSelector = isMaster || (isAdmin && !campanhaId);
 
   useEffect(() => {
-    if (!showCampaignSelector) return;
+    if (!isMaster && !isAdmin) return;
     if (isMaster) {
       // Master sees all campanhas
       supabase
@@ -81,9 +80,10 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
           }
         });
     }
-  }, [showCampaignSelector, isMaster, isAdmin, user.id]);
+  }, [isMaster, isAdmin, user.id]);
 
-  const activeCampanhaId = showCampaignSelector ? selectedCampanhaId : campanhaId;
+  const showCampaignSelector = (isMaster || isAdmin) && campanhas.length > 0;
+  const activeCampanhaId = (isMaster || (isAdmin && campanhas.length > 0)) ? selectedCampanhaId : campanhaId;
 
   return (
     <DropdownMenu>
