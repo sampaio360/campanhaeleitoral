@@ -66,16 +66,16 @@ export function NavUserMenu({ user, onSignOut }: NavUserMenuProps) {
         .order("nome")
         .then(({ data }) => { if (data) setCampanhas(data); });
     } else if (isAdmin) {
-      // Admin sees campanhas linked via user_campanhas
+      // Admin sees campanhas linked via user_campanhas (excluding soft-deleted)
       supabase
         .from("user_campanhas")
-        .select("campanha_id, campanhas:campanha_id(id, nome, partido, municipio, uf)")
+        .select("campanha_id, campanhas:campanha_id(id, nome, partido, municipio, uf, deleted_at)")
         .eq("user_id", user.id)
         .then(({ data }) => {
           if (data) {
             const mapped = data
               .map((d: any) => d.campanhas)
-              .filter(Boolean) as Campanha[];
+              .filter((c: any) => c && c.deleted_at === null) as Campanha[];
             setCampanhas(mapped);
           }
         });
