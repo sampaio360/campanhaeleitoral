@@ -144,9 +144,12 @@ const AgendaPage = () => {
     liderQuery = liderQuery.eq("lideranca_politica", true);
     if (activeCampanhaId) liderQuery = liderQuery.eq("campanha_id", activeCampanhaId);
 
+    let profQuery = supabase.from("profiles").select("id, name") as any;
+    if (activeCampanhaId) profQuery = profQuery.eq("campanha_id", activeCampanhaId);
+
     const [evRes, profRes, liderRes] = await Promise.all([
       evQuery,
-      supabase.from("profiles").select("id, name"),
+      profQuery,
       liderQuery,
     ]);
 

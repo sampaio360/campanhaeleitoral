@@ -80,7 +80,8 @@ const Reports = () => {
       let checkinsQuery = supabase.from('street_checkins').select('user_id, street_id, feedback_clima, feedback_demandas, streets(cidade)');
       if (activeCampanhaId) checkinsQuery = checkinsQuery.eq('campanha_id', activeCampanhaId);
 
-      let profilesQuery = supabase.from('profiles').select('id, name');
+      let profilesQuery = supabase.from('profiles').select('id, name') as any;
+      if (activeCampanhaId) profilesQuery = profilesQuery.eq('campanha_id', activeCampanhaId);
 
       let resourcesQuery = supabase.from('resource_requests' as any).select('valor_estimado, cidade, status');
       if (activeCampanhaId) resourcesQuery = (resourcesQuery as any).eq('campanha_id', activeCampanhaId).eq('status', 'aprovado');

@@ -75,10 +75,13 @@ const RouteAssignmentPage = () => {
       assignQuery = assignQuery.eq("campanha_id", activeCampanhaId);
       streetsQuery = streetsQuery.eq("campanha_id", activeCampanhaId);
     }
+    let profQuery = supabase.from("profiles").select("id, name") as any;
+    if (activeCampanhaId) profQuery = profQuery.eq("campanha_id", activeCampanhaId);
+
     const [assignmentsRes, streetsRes, profilesRes] = await Promise.all([
       assignQuery,
       streetsQuery,
-      supabase.from("profiles").select("id, name"),
+      profQuery,
     ]);
 
     const assignData = (assignmentsRes.data || []) as RouteAssignment[];
