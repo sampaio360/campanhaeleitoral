@@ -210,8 +210,10 @@ export function AdminUserCampanhas() {
     );
   }
 
+  const BASE_URL = "https://www.gerencialcampanha.com.br";
+
   const copyLink = (token: string, type: "convite" | "cadastro") => {
-    const url = `${window.location.origin}/${type}/${token}`;
+    const url = `${BASE_URL}/${type}/${token}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link copiado!" });
   };

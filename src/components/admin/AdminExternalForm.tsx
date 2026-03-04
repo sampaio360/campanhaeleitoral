@@ -120,8 +120,10 @@ export function AdminExternalForm() {
     setFields(updated);
   };
 
+  const BASE_URL = "https://www.gerencialcampanha.com.br";
+
   const copyLink = (t: string) => {
-    const url = `${window.location.origin}/cadastro/${t}`;
+    const url = `${BASE_URL}/cadastro/${t}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link copiado!" });
   };
@@ -227,7 +229,7 @@ export function AdminExternalForm() {
               {inviteLinks.map((link) => (
                 <div key={link.token} className="flex items-center gap-2 text-sm">
                   <code className="flex-1 truncate bg-muted px-2 py-1 rounded text-xs">
-                    {window.location.origin}/cadastro/{link.token}
+                    {BASE_URL}/cadastro/{link.token}
                   </code>
                   <Button size="sm" variant="ghost" onClick={() => copyLink(link.token)}>
                     <Copy className="w-4 h-4" />
