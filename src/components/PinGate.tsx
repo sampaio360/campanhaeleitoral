@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +15,7 @@ interface PinGateProps {
 export const PinGate = ({ onSuccess }: PinGateProps) => {
   const { toast } = useToast();
   const { profile, user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [pin, setPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -102,9 +104,12 @@ export const PinGate = ({ onSuccess }: PinGateProps) => {
         </Card>
 
         <button
+          type="button"
           onClick={async () => {
             sessionStorage.removeItem("pin_verified");
+            localStorage.removeItem("device_token");
             await signOut();
+            navigate("/auth", { replace: true });
           }}
           className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-4 mx-auto"
         >
