@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { SupportersHeatmap } from "@/components/dashboard/SupportersHeatmap";
 import { LeafletHeatmap } from "@/components/dashboard/LeafletHeatmap";
 import { SimultaneityWidget } from "@/components/dashboard/SimultaneityWidget";
+import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 
 const Dashboard = () => {
   const { selectedCampanhaId } = useAuth();
+  const { isWidgetEnabled } = useDashboardWidgets(selectedCampanhaId);
   const campanhaId = selectedCampanhaId;
   const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(campanhaId);
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ const Dashboard = () => {
 
         <div className="space-y-6">
           {/* Recurrence Alerts */}
-          {recurrenceAlerts.length > 0 && (
+          {isWidgetEnabled("recurrence_alerts") && recurrenceAlerts.length > 0 && (
             <Card className="border-orange-500/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2 text-orange-600">
@@ -91,7 +93,7 @@ const Dashboard = () => {
           )}
 
           {/* Effectiveness Ranking */}
-          {effectivenessRanking.length > 0 && (
+          {isWidgetEnabled("effectiveness_ranking") && effectivenessRanking.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -125,15 +127,23 @@ const Dashboard = () => {
           )}
 
           {/* Leaflet Map + Simultaneity Widget */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <LeafletHeatmap data={supporterPoints} loading={false} />
+          {(isWidgetEnabled("heatmap") || isWidgetEnabled("simultaneity")) && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {isWidgetEnabled("heatmap") && (
+                <div className={isWidgetEnabled("simultaneity") ? "lg:col-span-2" : "lg:col-span-3"}>
+                  <LeafletHeatmap data={supporterPoints} loading={false} />
+                </div>
+              )}
+              {isWidgetEnabled("simultaneity") && (
+                <SimultaneityWidget data={activeCheckins} loading={false} />
+              )}
             </div>
-            <SimultaneityWidget data={activeCheckins} loading={false} />
-          </div>
+          )}
 
           {/* Supporters Heatmap */}
-          <SupportersHeatmap data={heatmapData} loading={false} />
+          {isWidgetEnabled("supporters_heatmap") && (
+            <SupportersHeatmap data={heatmapData} loading={false} />
+          )}
         </div>
       </div>
     </div>

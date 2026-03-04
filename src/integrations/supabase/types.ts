@@ -327,6 +327,41 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_widget_config: {
+        Row: {
+          campanha_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          updated_at: string
+          widget_key: string
+        }
+        Insert: {
+          campanha_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          widget_key: string
+        }
+        Update: {
+          campanha_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string
+          widget_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widget_config_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number

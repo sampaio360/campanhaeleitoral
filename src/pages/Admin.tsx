@@ -5,7 +5,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { Navbar } from "@/components/Navbar";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Link2, Shield, FileText } from "lucide-react";
+import { Building2, Users, Link2, Shield, FileText, LayoutDashboard } from "lucide-react";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminPermissions } from "@/components/admin/AdminPermissions";
 import { AdminCampanhas } from "@/components/admin/AdminCampanhas";
@@ -13,6 +13,7 @@ import { AdminUserCampanhas } from "@/components/admin/AdminUserCampanhas";
 import { AdminHierarchy } from "@/components/admin/AdminHierarchy";
 import { AdminUserSupporters } from "@/components/admin/AdminUserSupporters";
 import { AdminExternalForm } from "@/components/admin/AdminExternalForm";
+import { AdminDashboardWidgets } from "@/components/admin/AdminDashboardWidgets";
 
 const adminTabs = [
   { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas" },
@@ -20,6 +21,7 @@ const adminTabs = [
   { value: "access", label: "Acesso", icon: Link2, step: 3, hint: "Vincule usuários às campanhas", route: "/admin?tab=access" },
   { value: "permissions", label: "Permissões", icon: Shield, step: 4, hint: "Defina funções e controle de acesso", route: "/admin?tab=permissions" },
   { value: "external-form", label: "Form Externo", icon: FileText, hint: "Configure formulário público", route: "/admin?tab=external-form" },
+  { value: "dashboard-widgets", label: "Dashboard", icon: LayoutDashboard, hint: "Ative ou desative widgets do Dashboard", route: "/admin?tab=dashboard-widgets" },
 ];
 
 const Admin = () => {
@@ -101,6 +103,7 @@ const Admin = () => {
           <TabsContent value="access"><AdminUserCampanhas /></TabsContent>
           <TabsContent value="permissions"><AdminPermissions /></TabsContent>
           <TabsContent value="external-form"><AdminExternalForm /></TabsContent>
+          <TabsContent value="dashboard-widgets"><AdminDashboardWidgets /></TabsContent>
         </Tabs>
       </div>
     </div>
