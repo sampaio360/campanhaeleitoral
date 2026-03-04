@@ -1181,6 +1181,7 @@ export type Database = {
           geolocation: unknown
           id: string
           latitude: number | null
+          lideranca_politica: boolean
           longitude: number | null
           nome: string
           observacao: string | null
@@ -1202,6 +1203,7 @@ export type Database = {
           geolocation?: unknown
           id?: string
           latitude?: number | null
+          lideranca_politica?: boolean
           longitude?: number | null
           nome: string
           observacao?: string | null
@@ -1223,6 +1225,7 @@ export type Database = {
           geolocation?: unknown
           id?: string
           latitude?: number | null
+          lideranca_politica?: boolean
           longitude?: number | null
           nome?: string
           observacao?: string | null

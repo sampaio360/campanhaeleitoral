@@ -1,0 +1,1 @@
+ALTER TABLE public.supporters ADD COLUMN lideranca_politica boolean NOT NULL DEFAULT false;

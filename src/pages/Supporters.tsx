@@ -28,6 +28,7 @@ interface Supporter {
   cep: string | null;
   cpf: string | null;
   funcao_politica: string | null;
+  lideranca_politica: boolean;
   observacao: string | null;
   foto_url: string | null;
   created_at: string | null;
@@ -95,7 +96,7 @@ const Supporters = () => {
     try {
       const { data, error } = await supabase
         .from('supporters')
-        .select('id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, observacao, foto_url, created_at')
+        .select('id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, lideranca_politica, observacao, foto_url, created_at')
         .eq('campanha_id', effectiveCampanhaId)
         .order('created_at', { ascending: false });
       if (error) {
@@ -228,14 +229,19 @@ const Supporters = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <h4 className="font-semibold text-sm sm:text-base truncate">{supporter.nome}</h4>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {supporter.created_at && (
-                            <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-                              {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
-                            </Badge>
-                          )}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h4 className="font-semibold text-sm sm:text-base truncate">{supporter.nome}</h4>
+                            {supporter.lideranca_politica && (
+                              <Badge variant="default" className="text-[10px] shrink-0 bg-amber-500 hover:bg-amber-600">Liderança</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {supporter.created_at && (
+                              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+                                {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
+                              </Badge>
+                            )}
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(supporter)}>
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>

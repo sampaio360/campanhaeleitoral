@@ -23,6 +23,12 @@ const FUNCOES_POLITICAS = [
   "Militante", "Simpatizante", "Outros",
 ];
 
+const FUNCOES_LIDERANCA = ["Prefeito(a)", "Vereador(a)"];
+
+function isLiderancaPolitica(funcao: string | undefined): boolean {
+  return !!funcao && FUNCOES_LIDERANCA.includes(funcao);
+}
+
 function maskCPF(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 11);
   return digits.replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -255,6 +261,7 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
         cidade: data.cidade || null, estado: data.estado || null,
         cep: data.cep?.replace(/\D/g, "") || null, cpf: data.cpf?.replace(/\D/g, "") || null,
         foto_url: fotoUrl, funcao_politica: data.funcao_politica || null,
+        lideranca_politica: isLiderancaPolitica(data.funcao_politica),
         observacao: data.observacao || null,
         latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
       };
@@ -321,7 +328,7 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
             </div>
 
             {/* Função Política + CPF */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="funcao_politica">Função Política</Label>
                 <Select value={form.funcao_politica} onValueChange={(value) => handleChange("funcao_politica", value)}>
@@ -330,6 +337,16 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
                     {FUNCOES_POLITICAS.map((funcao) => (<SelectItem key={funcao} value={funcao}>{funcao}</SelectItem>))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lideranca">Liderança Política</Label>
+                <Input
+                  id="lideranca"
+                  value={isLiderancaPolitica(form.funcao_politica) ? "Sim" : "Não"}
+                  readOnly
+                  className={`bg-muted ${isLiderancaPolitica(form.funcao_politica) ? "text-green-600 font-semibold" : ""}`}
+                />
+                <p className="text-xs text-muted-foreground">Preenchido automaticamente (Prefeito/Vereador)</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
