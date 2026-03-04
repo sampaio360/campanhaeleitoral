@@ -51,7 +51,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRoles, setUserRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
-  const [selectedCampanhaId, setSelectedCampanhaId] = useState<string | null>(null);
+  const [selectedCampanhaId, setSelectedCampanhaIdState] = useState<string | null>(() => {
+    try { return localStorage.getItem('selectedCampanhaId'); } catch { return null; }
+  });
+
+  const setSelectedCampanhaId = useCallback((id: string | null) => {
+    setSelectedCampanhaIdState(id);
+    try {
+      if (id) localStorage.setItem('selectedCampanhaId', id);
+      else localStorage.removeItem('selectedCampanhaId');
+    } catch {}
+  }, []);
   const [adminCampanhaIds, setAdminCampanhaIds] = useState<string[]>([]);
   const { toast } = useToast();
 

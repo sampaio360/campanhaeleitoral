@@ -215,7 +215,10 @@ const AgendaPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !activeCampanhaId) return;
+    if (!user || !activeCampanhaId) {
+      toast({ title: "Selecione uma campanha", description: "É necessário selecionar uma campanha ativa antes de criar um evento.", variant: "destructive" });
+      return;
+    }
     setCreating(true);
 
     const dataInicio = `${form.data_inicio}T${form.hora_inicio}:00`;
