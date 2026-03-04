@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,7 @@ interface PinGateProps {
 
 export const PinGate = ({ onSuccess }: PinGateProps) => {
   const { toast } = useToast();
-  const { profile, user } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const [pin, setPin] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -100,6 +100,17 @@ export const PinGate = ({ onSuccess }: PinGateProps) => {
             )}
           </CardContent>
         </Card>
+
+        <button
+          onClick={async () => {
+            sessionStorage.removeItem("pin_verified");
+            await signOut();
+          }}
+          className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mt-4 mx-auto"
+        >
+          <LogOut className="w-4 h-4" />
+          Trocar de usuário
+        </button>
       </div>
     </div>
   );
