@@ -63,19 +63,24 @@ export function useAccessControl() {
     // 2. If user has no roles, allow access by default (new users)
     if (!userRoles || userRoles.length === 0) return true;
 
-    // Normalize route: /budget/123 -> /budget
-    const normalizedRoute = '/' + route.split('/').filter(Boolean)[0];
+    // Normalize: try exact match first, then parent route
+    const segments = route.split('/').filter(Boolean);
+    const normalizedRoute = '/' + segments[0];
+    const isSubRoute = segments.length > 1;
 
     // 3. User-level override (highest priority after master)
     if (userRules && userRules.length > 0) {
-      const userRule = userRules.find(r => r.route === route || r.route === normalizedRoute);
+      // Check exact route first, then parent
+      const userRule = userRules.find(r => r.route === route) 
+        || (!isSubRoute ? userRules.find(r => r.route === normalizedRoute) : undefined);
       if (userRule) return userRule.allowed;
     }
 
     // 4. Role-based access_control rules
     if (rules && rules.length > 0) {
       for (const role of userRoles) {
-        const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
+        const rule = rules.find(r => r.role === role && r.route === route)
+          || (!isSubRoute ? rules.find(r => r.role === role && r.route === normalizedRoute) : undefined);
         if (rule) {
           if (rule.allowed) return true;
           continue;
@@ -86,7 +91,8 @@ export function useAccessControl() {
       }
 
       const hasAnyExplicitAllow = userRoles.some(role => {
-        const rule = rules.find(r => r.role === role && (r.route === route || r.route === normalizedRoute));
+        const rule = rules.find(r => r.role === role && r.route === route)
+          || (!isSubRoute ? rules.find(r => r.role === role && r.route === normalizedRoute) : undefined);
         return rule?.allowed;
       });
       return hasAnyExplicitAllow;

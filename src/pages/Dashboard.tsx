@@ -12,16 +12,17 @@ import { SupportersHeatmap } from "@/components/dashboard/SupportersHeatmap";
 import { LeafletHeatmap } from "@/components/dashboard/LeafletHeatmap";
 import { SimultaneityWidget } from "@/components/dashboard/SimultaneityWidget";
 import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
+import { useAccessControl } from "@/hooks/useAccessControl";
 
 const Dashboard = () => {
   const { selectedCampanhaId } = useAuth();
   const { isWidgetEnabled } = useDashboardWidgets(selectedCampanhaId);
-  const campanhaId = selectedCampanhaId;
-  const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(campanhaId);
+  const { canAccess } = useAccessControl();
+  const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(selectedCampanhaId);
   const navigate = useNavigate();
 
-  const recurrenceAlerts = useRecurrenceAlerts(campanhaId);
-  const effectivenessRanking = useEffectivenessRanking(campanhaId);
+  const recurrenceAlerts = useRecurrenceAlerts(selectedCampanhaId);
+  const effectivenessRanking = useEffectivenessRanking(selectedCampanhaId);
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -54,7 +55,7 @@ const Dashboard = () => {
 
         <div className="space-y-6">
           {/* Recurrence Alerts */}
-          {isWidgetEnabled("recurrence_alerts") && recurrenceAlerts.length > 0 && (
+          {isWidgetEnabled("recurrence_alerts") && canAccess("/dashboard/alertas") && recurrenceAlerts.length > 0 && (
             <Card className="border-orange-500/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2 text-orange-600">
@@ -93,7 +94,7 @@ const Dashboard = () => {
           )}
 
           {/* Effectiveness Ranking */}
-          {isWidgetEnabled("effectiveness_ranking") && effectivenessRanking.length > 0 && (
+          {isWidgetEnabled("effectiveness_ranking") && canAccess("/dashboard/ranking") && effectivenessRanking.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -127,21 +128,21 @@ const Dashboard = () => {
           )}
 
           {/* Leaflet Map + Simultaneity Widget */}
-          {(isWidgetEnabled("heatmap") || isWidgetEnabled("simultaneity")) && (
+          {((isWidgetEnabled("heatmap") && canAccess("/dashboard/heatmap")) || (isWidgetEnabled("simultaneity") && canAccess("/dashboard/simultaneidade"))) && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {isWidgetEnabled("heatmap") && (
-                <div className={isWidgetEnabled("simultaneity") ? "lg:col-span-2" : "lg:col-span-3"}>
+              {isWidgetEnabled("heatmap") && canAccess("/dashboard/heatmap") && (
+                <div className={isWidgetEnabled("simultaneity") && canAccess("/dashboard/simultaneidade") ? "lg:col-span-2" : "lg:col-span-3"}>
                   <LeafletHeatmap data={supporterPoints} loading={false} />
                 </div>
               )}
-              {isWidgetEnabled("simultaneity") && (
+              {isWidgetEnabled("simultaneity") && canAccess("/dashboard/simultaneidade") && (
                 <SimultaneityWidget data={activeCheckins} loading={false} />
               )}
             </div>
           )}
 
           {/* Supporters Heatmap */}
-          {isWidgetEnabled("supporters_heatmap") && (
+          {isWidgetEnabled("supporters_heatmap") && canAccess("/dashboard/heatmap-apoiadores") && (
             <SupportersHeatmap data={heatmapData} loading={false} />
           )}
         </div>
