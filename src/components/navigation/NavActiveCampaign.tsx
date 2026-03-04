@@ -1,14 +1,13 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2 } from "lucide-react";
 
 export function NavActiveCampaign() {
-  const { isMaster, isAdmin, selectedCampanhaId, campanhaId } = useAuth();
+  const { isMaster, isAdmin } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const [campaignName, setCampaignName] = useState<string | null>(null);
-
-  const canSelectCampaign = isMaster || isAdmin;
-  const activeCampanhaId = canSelectCampaign ? (selectedCampanhaId || campanhaId) : campanhaId;
 
   useEffect(() => {
     if (!activeCampanhaId) {

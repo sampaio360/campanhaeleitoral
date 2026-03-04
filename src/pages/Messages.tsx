@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, AlertTriangle, Loader2 } from "lucide-react";
@@ -24,8 +25,8 @@ interface TeamMessage {
 }
 
 const Messages = () => {
-  const { user, campanhaId, selectedCampanhaId, isCoordinator, isMaster } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const { user, isCoordinator } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [loading, setLoading] = useState(true);

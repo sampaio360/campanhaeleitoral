@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Users, UserPlus, Phone, Mail, MapPin } from "lucide-react";
@@ -21,8 +22,8 @@ interface Supporter {
 }
 
 const Supporters = () => {
-  const { user, campanhaId, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
+  const { user } = useAuth();
+  const effectiveCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [loading, setLoading] = useState(true);

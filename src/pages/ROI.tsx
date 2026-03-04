@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TrendingUp, DollarSign, Target, Upload } from "lucide-react";
@@ -17,8 +18,8 @@ interface CityROI {
 }
 
 const ROI = () => {
-  const { profile, campanhaId, selectedCampanhaId, isMaster } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const { profile } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const [cityData, setCityData] = useState<CityROI[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);

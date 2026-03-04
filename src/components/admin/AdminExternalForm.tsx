@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -31,8 +32,7 @@ const FIELD_OPTIONS = [
 ];
 
 export function AdminExternalForm() {
-  const { campanhaId, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
+  const effectiveCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

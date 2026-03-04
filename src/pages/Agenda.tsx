@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -82,8 +83,8 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 /* ───── Component ───── */
 
 const AgendaPage = () => {
-  const { user, campanhaId, isMaster, selectedCampanhaId, isAdmin } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const { user, isMaster, isAdmin } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 
 import { MapPin, Users, MessageSquare, ArrowLeft, TrendingUp } from "lucide-react";
@@ -33,8 +34,7 @@ const CLIMA_LABELS: Record<string, { label: string; emoji: string }> = {
 
 const DossieVisita = () => {
   const { cidade } = useParams<{ cidade: string }>();
-  const { campanhaId, selectedCampanhaId, isMaster } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const activeCampanhaId = useActiveCampanhaId();
   const navigate = useNavigate();
   const [data, setData] = useState<DossieData | null>(null);
   const [loading, setLoading] = useState(true);

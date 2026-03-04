@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Download, BarChart3, PieChart, TrendingUp, Users } from "lucide-react";
@@ -36,8 +37,8 @@ interface CityProductivity {
 }
 
 const Reports = () => {
-  const { user, campanhaId, selectedCampanhaId } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const { user } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [expensesByCategory, setExpensesByCategory] = useState<ExpenseData[]>([]);

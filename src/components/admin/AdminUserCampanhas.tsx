@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +16,8 @@ import { Loader2, Link2, Save, Crown, Plus, Copy, Trash2, Shield } from "lucide-
 export function AdminUserCampanhas() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { campanhaId, selectedCampanhaId, user, isMaster } = useAuth();
-  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
+  const { user, isMaster } = useAuth();
+  const effectiveCampanhaId = useActiveCampanhaId();
   const [pendingChanges, setPendingChanges] = useState<Record<string, string | null>>({});
   const [expiresInDays, setExpiresInDays] = useState("7");
   const [addAdminCampanha, setAddAdminCampanha] = useState<Record<string, string>>({});

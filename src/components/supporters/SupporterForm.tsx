@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { geocodeAddress } from "@/lib/geocode";
@@ -85,8 +86,7 @@ const initialForm: SupporterFormData = {
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
-  const { campanhaId, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
+  const effectiveCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [form, setForm] = useState<SupporterFormData>(initialForm);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);

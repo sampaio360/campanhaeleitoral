@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Route, Plus, Search, Loader2, Calendar, User, MapPin, CheckCircle, Clock, Play } from "lucide-react";
@@ -42,8 +43,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 const RouteAssignmentPage = () => {
-  const { user, campanhaId, selectedCampanhaId, isAdmin, isMaster } = useAuth();
-  const activeCampanhaId = selectedCampanhaId || campanhaId;
+  const { user, isAdmin } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [assignments, setAssignments] = useState<RouteAssignment[]>([]);
   const [streets, setStreets] = useState<Street[]>([]);
