@@ -17,7 +17,8 @@ interface CityROI {
 }
 
 const ROI = () => {
-  const { profile, campanhaId, isMaster } = useAuth();
+  const { profile, campanhaId, selectedCampanhaId, isMaster } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const [cityData, setCityData] = useState<CityROI[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
@@ -25,13 +26,13 @@ const ROI = () => {
   const candidateId = profile?.candidate_id;
 
   const fetchROI = useCallback(async () => {
-    if ((!campanhaId && !isMaster) || !candidateId) { setLoading(false); return; }
+    if (!activeCampanhaId || !candidateId) { setLoading(false); return; }
 
     // Fetch expenses by city, votes, and approved resource requests
     const [expensesRes, resourcesRes, votesRes] = await Promise.all([
-      supabase.from("expenses").select("amount, category").eq("campanha_id", campanhaId),
-      (supabase.from("resource_requests" as any).select("valor_estimado, cidade, status").eq("campanha_id", campanhaId).eq("status", "aprovado") as any),
-      supabase.from("street_checkins").select("streets(cidade)").eq("campanha_id", campanhaId),
+      supabase.from("expenses").select("amount, category").eq("campanha_id", activeCampanhaId),
+      (supabase.from("resource_requests" as any).select("valor_estimado, cidade, status").eq("campanha_id", activeCampanhaId).eq("status", "aprovado") as any),
+      supabase.from("street_checkins").select("streets(cidade)").eq("campanha_id", activeCampanhaId),
     ]);
 
     // Aggregate expenses — expenses don't have a city column, so total them
@@ -75,7 +76,7 @@ const ROI = () => {
     result.sort((a, b) => a.custoPorVoto - b.custoPorVoto);
     setCityData(result);
     setLoading(false);
-  }, [campanhaId, candidateId]);
+  }, [activeCampanhaId, candidateId]);
 
   useEffect(() => { fetchROI(); }, [fetchROI]);
 

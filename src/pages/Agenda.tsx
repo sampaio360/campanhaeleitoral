@@ -83,7 +83,7 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const AgendaPage = () => {
   const { user, campanhaId, isMaster, selectedCampanhaId, isAdmin } = useAuth();
-  const activeCampanhaId = campanhaId || ((isMaster || isAdmin) ? selectedCampanhaId : null);
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);

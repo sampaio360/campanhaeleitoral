@@ -31,8 +31,8 @@ const FIELD_OPTIONS = [
 ];
 
 export function AdminExternalForm() {
-  const { campanhaId, isMaster, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
+  const { campanhaId, selectedCampanhaId } = useAuth();
+  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

@@ -33,13 +33,14 @@ const CLIMA_LABELS: Record<string, { label: string; emoji: string }> = {
 
 const DossieVisita = () => {
   const { cidade } = useParams<{ cidade: string }>();
-  const { campanhaId, isMaster } = useAuth();
+  const { campanhaId, selectedCampanhaId, isMaster } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const navigate = useNavigate();
   const [data, setData] = useState<DossieData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDossie = useCallback(async () => {
-    if ((!campanhaId && !isMaster) || !cidade) { setLoading(false); return; }
+    if (!activeCampanhaId || !cidade) { setLoading(false); return; }
 
     try {
       const decodedCidade = decodeURIComponent(cidade);
@@ -48,7 +49,7 @@ const DossieVisita = () => {
       const { data: streetsData } = await supabase
         .from("streets")
         .select("id, nome, status_cobertura")
-        .eq("campanha_id", campanhaId)
+        .eq("campanha_id", activeCampanhaId)
         .eq("cidade", decodedCidade);
 
       const streetIds = (streetsData || []).map(s => s.id);
@@ -61,7 +62,7 @@ const DossieVisita = () => {
         const { data: checkinsData } = await supabase
           .from("street_checkins")
           .select("id, feedback_clima, feedback_demandas, liderancas_identificadas, ended_at, street_id")
-          .eq("campanha_id", campanhaId)
+          .eq("campanha_id", activeCampanhaId)
           .eq("status", "completed")
           .in("street_id", streetIds)
           .order("ended_at", { ascending: false })
@@ -108,7 +109,7 @@ const DossieVisita = () => {
     } finally {
       setLoading(false);
     }
-  }, [campanhaId, cidade]);
+  }, [activeCampanhaId, cidade]);
 
   useEffect(() => { fetchDossie(); }, [fetchDossie]);
 

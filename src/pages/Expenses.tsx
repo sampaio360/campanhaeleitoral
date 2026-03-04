@@ -43,7 +43,8 @@ const paymentMethods = [
 ] as const;
 
 const Expenses = () => {
-  const { user, campanhaId, profile, isMaster } = useAuth();
+  const { user, campanhaId, selectedCampanhaId, profile, isMaster } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,14 +61,14 @@ const Expenses = () => {
 
   useEffect(() => {
     fetchExpenses();
-  }, [user, campanhaId]);
+  }, [user, activeCampanhaId]);
 
   const fetchExpenses = async () => {
     if (!user) return;
 
     try {
       let query = supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (campanhaId) query = query.eq('campanha_id', campanhaId);
+      if (activeCampanhaId) query = query.eq('campanha_id', activeCampanhaId);
       const { data, error } = await query;
 
       if (error) {
@@ -89,14 +90,14 @@ const Expenses = () => {
     setCreating(true);
 
     try {
-      if (!campanhaId) {
-        toast({ title: "Erro", description: isMaster ? "Selecione uma campanha primeiro." : "Você precisa estar vinculado a uma campanha para registrar despesas", variant: "destructive" });
+      if (!activeCampanhaId) {
+        toast({ title: "Erro", description: "Selecione uma campanha primeiro.", variant: "destructive" });
         return;
       }
 
       const { error } = await supabase.from('expenses').insert({
         candidate_id: profile?.candidate_id || undefined,
-        campanha_id: campanhaId,
+        campanha_id: activeCampanhaId,
         date: form.date,
         category: form.category as Database["public"]["Enums"]["expense_category"],
         description: form.description,

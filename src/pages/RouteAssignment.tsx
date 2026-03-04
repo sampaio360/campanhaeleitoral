@@ -42,7 +42,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 const RouteAssignmentPage = () => {
-  const { user, campanhaId, isAdmin, isMaster } = useAuth();
+  const { user, campanhaId, selectedCampanhaId, isAdmin, isMaster } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [assignments, setAssignments] = useState<RouteAssignment[]>([]);
   const [streets, setStreets] = useState<Street[]>([]);
@@ -65,13 +66,13 @@ const RouteAssignmentPage = () => {
   const [profileMap, setProfileMap] = useState<Record<string, Profile>>({});
 
   const fetchData = useCallback(async () => {
-    if (!user || (!campanhaId && !isMaster)) { setLoading(false); return; }
+    if (!user || !activeCampanhaId) { setLoading(false); return; }
 
     let assignQuery = supabase.from("route_assignments" as any).select("*").order("data_planejada", { ascending: true }) as any;
     let streetsQuery = supabase.from("streets").select("id, nome, bairro, cidade").order("nome");
-    if (campanhaId) {
-      assignQuery = assignQuery.eq("campanha_id", campanhaId);
-      streetsQuery = streetsQuery.eq("campanha_id", campanhaId);
+    if (activeCampanhaId) {
+      assignQuery = assignQuery.eq("campanha_id", activeCampanhaId);
+      streetsQuery = streetsQuery.eq("campanha_id", activeCampanhaId);
     }
     const [assignmentsRes, streetsRes, profilesRes] = await Promise.all([
       assignQuery,
@@ -96,17 +97,17 @@ const RouteAssignmentPage = () => {
     setProfileMap(pMap);
 
     setLoading(false);
-  }, [user, campanhaId, isMaster]);
+  }, [user, activeCampanhaId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !campanhaId) return;
+    if (!user || !activeCampanhaId) return;
     setCreating(true);
 
     const { error } = await (supabase.from("route_assignments" as any) as any).insert({
-      campanha_id: campanhaId,
+      campanha_id: activeCampanhaId,
       assigned_by: user.id,
       assigned_to: form.assigned_to,
       street_id: form.street_id,

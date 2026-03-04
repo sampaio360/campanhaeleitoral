@@ -85,8 +85,8 @@ const initialForm: SupporterFormData = {
 };
 
 export function SupporterForm({ onSuccess, onCancel }: SupporterFormProps) {
-  const { campanhaId, isMaster, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
+  const { campanhaId, selectedCampanhaId } = useAuth();
+  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [form, setForm] = useState<SupporterFormData>(initialForm);
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);

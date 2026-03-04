@@ -15,8 +15,8 @@ import { Loader2, Link2, Save, Crown, Plus, Copy, Trash2, Shield } from "lucide-
 export function AdminUserCampanhas() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { campanhaId, isMaster, selectedCampanhaId, user } = useAuth();
-  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
+  const { campanhaId, selectedCampanhaId, user, isMaster } = useAuth();
+  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
   const [pendingChanges, setPendingChanges] = useState<Record<string, string | null>>({});
   const [expiresInDays, setExpiresInDays] = useState("7");
   const [addAdminCampanha, setAddAdminCampanha] = useState<Record<string, string>>({});

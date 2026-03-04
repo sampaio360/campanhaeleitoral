@@ -36,7 +36,8 @@ interface CityProductivity {
 }
 
 const Reports = () => {
-  const { user, campanhaId } = useAuth();
+  const { user, campanhaId, selectedCampanhaId } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [expensesByCategory, setExpensesByCategory] = useState<ExpenseData[]>([]);
@@ -63,25 +64,25 @@ const Reports = () => {
 
   useEffect(() => {
     fetchReportData();
-  }, [user, campanhaId]);
+  }, [user, activeCampanhaId]);
 
   const fetchReportData = async () => {
     if (!user) return;
 
     try {
       let expQuery = supabase.from('expenses').select('category, amount, date');
-      if (campanhaId) expQuery = expQuery.eq('campanha_id', campanhaId);
+      if (activeCampanhaId) expQuery = expQuery.eq('campanha_id', activeCampanhaId);
 
       let budgetQuery = supabase.from('budgets').select('total_planned').eq('active', true);
-      if (campanhaId) budgetQuery = budgetQuery.eq('campanha_id', campanhaId);
+      if (activeCampanhaId) budgetQuery = budgetQuery.eq('campanha_id', activeCampanhaId);
 
       let checkinsQuery = supabase.from('street_checkins').select('user_id, street_id, feedback_clima, feedback_demandas, streets(cidade)');
-      if (campanhaId) checkinsQuery = checkinsQuery.eq('campanha_id', campanhaId);
+      if (activeCampanhaId) checkinsQuery = checkinsQuery.eq('campanha_id', activeCampanhaId);
 
       let profilesQuery = supabase.from('profiles').select('id, name');
 
       let resourcesQuery = supabase.from('resource_requests' as any).select('valor_estimado, cidade, status');
-      if (campanhaId) resourcesQuery = (resourcesQuery as any).eq('campanha_id', campanhaId).eq('status', 'aprovado');
+      if (activeCampanhaId) resourcesQuery = (resourcesQuery as any).eq('campanha_id', activeCampanhaId).eq('status', 'aprovado');
 
       const [expRes, budgetRes, checkinsRes, profilesRes, resourcesRes] = await Promise.all([
         expQuery,

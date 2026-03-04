@@ -21,8 +21,8 @@ interface Supporter {
 }
 
 const Supporters = () => {
-  const { user, campanhaId, isMaster, selectedCampanhaId } = useAuth();
-  const effectiveCampanhaId = isMaster ? (selectedCampanhaId || campanhaId) : campanhaId;
+  const { user, campanhaId, selectedCampanhaId } = useAuth();
+  const effectiveCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [supporters, setSupporters] = useState<Supporter[]>([]);
   const [loading, setLoading] = useState(true);

@@ -24,7 +24,8 @@ interface TeamMessage {
 }
 
 const Messages = () => {
-  const { user, campanhaId, isCoordinator, isMaster } = useAuth();
+  const { user, campanhaId, selectedCampanhaId, isCoordinator, isMaster } = useAuth();
+  const activeCampanhaId = selectedCampanhaId || campanhaId;
   const { toast } = useToast();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,28 +34,28 @@ const Messages = () => {
   const [form, setForm] = useState({ titulo: "", conteudo: "", cidade: "", prioridade: "normal" });
 
   const fetchMessages = useCallback(async () => {
-    if (!campanhaId && !isMaster) { setLoading(false); return; }
+    if (!activeCampanhaId) { setLoading(false); return; }
     let query = supabase
       .from("team_messages" as any)
       .select("*")
       .order("created_at", { ascending: false })
       .limit(100) as any;
-    if (campanhaId) query = query.eq("campanha_id", campanhaId);
+    if (activeCampanhaId) query = query.eq("campanha_id", activeCampanhaId);
     const { data, error } = await query;
 
     if (!error) setMessages((data as TeamMessage[]) || []);
     setLoading(false);
-  }, [campanhaId, isMaster]);
+  }, [activeCampanhaId]);
 
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !campanhaId) return;
+    if (!user || !activeCampanhaId) return;
     setSending(true);
 
     const { error } = await (supabase.from("team_messages" as any) as any).insert({
-      campanha_id: campanhaId,
+      campanha_id: activeCampanhaId,
       sender_id: user.id,
       titulo: form.titulo,
       conteudo: form.conteudo,
