@@ -220,9 +220,21 @@ export default function ExternalRegister() {
             <CheckCircle className="w-12 h-12 text-green-600" />
             <h2 className="text-lg font-semibold">Cadastro Realizado!</h2>
             <p className="text-muted-foreground text-center">{config?.mensagem_sucesso}</p>
-            <p className="text-sm text-muted-foreground text-center">
-              Você já pode fazer login com seu email e senha. Use o PIN para acessar o sistema.
-            </p>
+            
+            {form.pin && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-center w-full">
+                <p className="text-sm font-medium text-primary mb-1">Seu PIN de acesso rápido</p>
+                <p className="text-3xl font-bold tracking-[0.5em] text-primary">{form.pin}</p>
+                <p className="text-xs text-muted-foreground mt-2">Guarde este PIN para acessos futuros</p>
+              </div>
+            )}
+
+            <Button
+              className="w-full mt-2"
+              onClick={() => window.location.href = "/auth"}
+            >
+              Ir para o Login
+            </Button>
           </CardContent>
         </Card>
       </div>
