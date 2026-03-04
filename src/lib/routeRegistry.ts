@@ -10,7 +10,16 @@ export interface RouteEntry {
 }
 
 export const ROUTE_REGISTRY: RouteEntry[] = [
-  { id: "dashboard", label: "Dashboard", route: "/dashboard" },
+  {
+    id: "dashboard", label: "Dashboard", route: "/dashboard",
+    children: [
+      { id: "dashboard-alertas", label: "Alertas de Recorrência", route: "/dashboard/alertas" },
+      { id: "dashboard-ranking", label: "Ranking de Efetividade", route: "/dashboard/ranking" },
+      { id: "dashboard-heatmap", label: "Mapa de Calor", route: "/dashboard/heatmap" },
+      { id: "dashboard-simultaneidade", label: "Simultaneidade", route: "/dashboard/simultaneidade" },
+      { id: "dashboard-heatmap-apoiadores", label: "Heatmap Apoiadores", route: "/dashboard/heatmap-apoiadores" },
+    ],
+  },
   {
     id: "financeiro", label: "Financeiro", route: "/budget",
     children: [
