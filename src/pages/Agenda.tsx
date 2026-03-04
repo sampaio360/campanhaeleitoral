@@ -82,7 +82,8 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 /* ───── Component ───── */
 
 const AgendaPage = () => {
-  const { user, campanhaId, isMaster } = useAuth();
+  const { user, campanhaId, isMaster, selectedCampanhaId, isAdmin } = useAuth();
+  const activeCampanhaId = campanhaId || ((isMaster || isAdmin) ? selectedCampanhaId : null);
   const { toast } = useToast();
   const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -108,7 +109,7 @@ const AgendaPage = () => {
   /* ───── Data Fetching ───── */
 
   const fetchData = useCallback(async () => {
-    if (!user || (!campanhaId && !isMaster)) { setLoading(false); return; }
+    if (!user || (!activeCampanhaId && !isMaster)) { setLoading(false); return; }
 
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -120,7 +121,7 @@ const AgendaPage = () => {
       .lte("data_inicio", monthEnd.toISOString())
       .order("data_inicio", { ascending: true }) as any;
 
-    if (campanhaId) evQuery = evQuery.eq("campanha_id", campanhaId);
+    if (activeCampanhaId) evQuery = evQuery.eq("campanha_id", activeCampanhaId);
 
     const [evRes, profRes] = await Promise.all([
       evQuery,
@@ -134,7 +135,7 @@ const AgendaPage = () => {
     profs.forEach((p) => (pMap[p.id] = p));
     setProfileMap(pMap);
     setLoading(false);
-  }, [user, campanhaId, isMaster, currentMonth]);
+  }, [user, activeCampanhaId, isMaster, currentMonth]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -214,14 +215,14 @@ const AgendaPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !campanhaId) return;
+    if (!user || !activeCampanhaId) return;
     setCreating(true);
 
     const dataInicio = `${form.data_inicio}T${form.hora_inicio}:00`;
     const dataFim = form.data_fim && form.hora_fim ? `${form.data_fim}T${form.hora_fim}:00` : form.data_fim ? `${form.data_fim}T23:59:00` : null;
 
     const payload = {
-      campanha_id: campanhaId,
+      campanha_id: activeCampanhaId,
       titulo: form.titulo,
       descricao: form.descricao || null,
       tipo: form.tipo,
