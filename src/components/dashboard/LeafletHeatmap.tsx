@@ -27,7 +27,11 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
   // Invalidate map size when toggling fullscreen
   useEffect(() => {
     if (mapInstanceRef.current) {
-      setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+      // Multiple invalidations to ensure tiles load correctly
+      const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
+      const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
+      const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 500);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
   }, [fullscreen]);
 
@@ -144,32 +148,42 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
   }
 
   return (
-    <Card className={fullscreen ? "fixed inset-0 z-50 rounded-none flex flex-col" : ""}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MapPin className="w-5 h-5" /> Mapa de Calor — Apoiadores
-        </CardTitle>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setFullscreen((f) => !f)}
-          title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
-        >
-          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-        </Button>
-      </CardHeader>
-      <CardContent className={fullscreen ? "flex-1 min-h-0" : ""}>
-        {validPoints.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <MapPin className="w-10 h-10 mb-2 opacity-40" />
-            <p className="text-sm">Nenhum apoiador com geolocalização cadastrado.</p>
-            <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
-          </div>
-        ) : (
-          <div ref={mapRef} className={`rounded-lg overflow-hidden ${fullscreen ? "h-full" : "h-80"}`} />
-        )}
-      </CardContent>
-    </Card>
+    <>
+      {fullscreen && <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" />}
+      <Card className={
+        fullscreen
+          ? "fixed inset-0 z-50 rounded-none flex flex-col m-0 border-0"
+          : ""
+      }>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MapPin className="w-5 h-5" /> Mapa de Calor — Apoiadores
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setFullscreen((f) => !f)}
+            title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          >
+            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </Button>
+        </CardHeader>
+        <CardContent className={fullscreen ? "flex-1 p-0 min-h-0" : ""}>
+          {validPoints.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <MapPin className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-sm">Nenhum apoiador com geolocalização cadastrado.</p>
+              <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
+            </div>
+          ) : (
+            <div
+              ref={mapRef}
+              className={fullscreen ? "w-full h-full" : "h-80 rounded-lg overflow-hidden"}
+            />
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }
