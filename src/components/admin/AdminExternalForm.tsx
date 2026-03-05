@@ -291,10 +291,10 @@ export function AdminExternalForm() {
                           <TableCell>
                             {!isUsed && !isExpired && (
                               <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" title="Copiar link de convite (criar conta)" onClick={() => copyLink(link.token, "convite")}>
+                                <Button size="sm" variant="ghost" title="Copiar link — Criar Conta (com login)" onClick={() => copyLink(link.token, "convite")}>
                                   <Copy className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" title="Copiar link de cadastro externo" onClick={() => copyLink(link.token, "cadastro")}>
+                                <Button size="sm" variant="ghost" title="Copiar link — Coleta de Dados (sem conta)" onClick={() => copyLink(link.token, "cadastro")}>
                                   <Link2 className="w-4 h-4" />
                                 </Button>
                                 <AlertDialog>
