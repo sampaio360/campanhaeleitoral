@@ -1,61 +1,58 @@
 
 
-## Etapa 1: Padronizar Resolucao de `campanhaId`
+## Avaliacao e Plano: Isolamento por Campanha Ativa
 
-### Problema
-7 paginas usam `campanhaId` direto do perfil, ignorando `selectedCampanhaId`. Para admins sem `campanha_id` no perfil (ex: Neemias), tudo quebra. Outras 4 paginas usam `isMaster ? (selected || campanha) : campanha`, o que exclui admins.
+### Situacao Atual
 
-### Padrao Correto
-```text
-const activeCampanhaId = selectedCampanhaId || campanhaId;
-```
-Isso funciona para todos: usuarios normais (selectedCampanhaId e null, usa campanhaId), admins e masters (usa selectedCampanhaId).
+**O que ja funciona:**
+- Admin/Master com **1 campanha**: auto-selecionada no login (OK)
+- Admin/Master com **multiplas campanhas**: seletor disponivel no menu do usuario (submenu)
+- **11 modulos** ja usam `useActiveCampanhaId()` ou `selectedCampanhaId || campanhaId` corretamente
 
-### Alteracoes por Arquivo
+**Problemas identificados (2 categorias):**
 
-**1. `src/pages/Expenses.tsx`**
-- Linha 46: adicionar `selectedCampanhaId` ao destructuring do `useAuth()`
-- Adicionar: `const activeCampanhaId = selectedCampanhaId || campanhaId;`
-- Substituir todas as referencias a `campanhaId` por `activeCampanhaId` (linhas 63, 70, 92, 99)
-- Remover import nao usado `CardDescription` (linha 2)
+#### Problema 1: Tela de selecao obrigatoria inexistente
+Admins com multiplas campanhas entram no sistema **sem campanha selecionada**. Os dados ficam vazios ou mostram tudo misturado ate que o admin va manualmente no menu do usuario e escolha. Nao ha uma tela bloqueante pedindo a selecao.
 
-**2. `src/pages/Reports.tsx`**
-- Linha 39: adicionar `selectedCampanhaId` ao destructuring
-- Adicionar `activeCampanhaId` e substituir `campanhaId` nas queries (linhas 66, 73, 75, 77, 79)
+#### Problema 2: 8 modulos ignoram `selectedCampanhaId`
+Usam `campanhaId` direto do perfil, entao mesmo que o admin selecione outra campanha no menu, esses modulos continuam mostrando dados da campanha do perfil (ou nada, se o perfil nao tiver `campanha_id`).
 
-**3. `src/pages/DossieVisita.tsx`**
-- Linha 36: adicionar `selectedCampanhaId` ao destructuring
-- Adicionar `activeCampanhaId` e substituir nas queries (linhas 42, 51, 64)
+| # | Modulo | Arquivo | Problema |
+|---|--------|---------|----------|
+| 1 | Orcamentos | `useBudgetData.ts` | Usa `campanhaId` do perfil |
+| 2 | Receitas | `BudgetRevenues.tsx` | Idem |
+| 3 | Despesas (Financeiro) | `BudgetExpenses.tsx` | Idem |
+| 4 | Recursos | `Resources.tsx` | Idem |
+| 5 | Inventario | `MaterialInventory.tsx` | Idem |
+| 6 | Dashboard Data | `useDashboardData.ts` | So resolve para Master, exclui Admin |
+| 7 | Dashboard Alertas | `useDashboardAlerts.ts` | Idem |
+| 8 | Auditoria | `Audit.tsx` | Idem |
 
-**4. `src/pages/ROI.tsx`**
-- Linha 20: adicionar `selectedCampanhaId`
-- Adicionar `activeCampanhaId` e substituir (linhas 28, 32, 33, 34)
+---
 
-**5. `src/pages/RouteAssignment.tsx`**
-- Linha 45: adicionar `selectedCampanhaId`
-- Adicionar `activeCampanhaId` e substituir (linhas 68, 72-74)
+### Plano de Correcao
 
-**6. `src/pages/Messages.tsx`**
-- Linha 27: adicionar `selectedCampanhaId`
-- Adicionar `activeCampanhaId` e substituir (linhas 36, 42, 53, 57)
+#### Parte 1: Tela bloqueante de selecao de campanha
 
-**7. `src/pages/Agenda.tsx`**
-- Linha 86: corrigir de `campanhaId || ((isMaster || isAdmin) ? selectedCampanhaId : null)` para `selectedCampanhaId || campanhaId`
+Criar um componente `CampaignGate` que intercepta no `ProtectedRoute`. Se o usuario for admin/master, nao tiver `campanha_id` no perfil, e `selectedCampanhaId` estiver vazio, exibe uma tela de selecao obrigatoria antes de permitir acesso ao sistema.
 
-**8. `src/pages/Supporters.tsx`**
-- Linha 25: corrigir de `isMaster ? (selectedCampanhaId || campanhaId) : campanhaId` para `selectedCampanhaId || campanhaId`
+- Arquivo: `src/components/CampaignGate.tsx` (novo)
+- Integrar em: `src/components/ProtectedRoute.tsx` (apos PinGate)
+- Exibe lista de campanhas vinculadas (admin via `user_campanhas`, master via todas)
+- Ao selecionar, chama `setSelectedCampanhaId` e o sistema continua
 
-**9. `src/components/supporters/SupporterForm.tsx`**
-- Linha 89: mesma correcao
+#### Parte 2: Corrigir os 8 modulos com isolamento quebrado
 
-**10. `src/components/admin/AdminExternalForm.tsx`**
-- Linha 35: mesma correcao
+Substituir `campanhaId` de `useAuth()` por `useActiveCampanhaId()` em todos os 8 arquivos:
 
-**11. `src/components/admin/AdminUserCampanhas.tsx`**
-- Linha 19: mesma correcao
+1. **`useBudgetData.ts`** -- trocar `campanhaId` por `useActiveCampanhaId()`
+2. **`BudgetRevenues.tsx`** -- idem
+3. **`BudgetExpenses.tsx`** -- idem
+4. **`Resources.tsx`** -- idem
+5. **`MaterialInventory.tsx`** -- idem
+6. **`useDashboardData.ts`** -- trocar logica `isMaster && override` por `overrideCampanhaId || profileCampanhaId`
+7. **`useDashboardAlerts.ts`** -- idem
+8. **`Audit.tsx`** -- trocar por `selectedCampanhaId || profileCampanhaId`
 
-### Impacto
-- Corrige 7 paginas completamente quebradas para admins sem `campanha_id` no perfil
-- Unifica 4 padroes diferentes em 1 unico padrao consistente
-- Zero risco de regressao: para usuarios com `campanhaId` e sem `selectedCampanhaId`, o comportamento e identico
+Todas as substituicoes seguem o padrao ja consolidado nos 11 modulos que funcionam. Para usuarios comuns (sem `selectedCampanhaId`), o comportamento e identico ao atual.
 
