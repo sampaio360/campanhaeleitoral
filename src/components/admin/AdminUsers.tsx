@@ -63,6 +63,8 @@ export function AdminUsers() {
   const [newUserName, setNewUserName] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState(generatePin());
+  const [newUserRole, setNewUserRole] = useState<AppRole>("supporter");
+  const [newUserCampanhaId, setNewUserCampanhaId] = useState<string>("");
 
   // Supporter linking dialog
   const [linkingUserId, setLinkingUserId] = useState<string | null>(null);
@@ -200,7 +202,7 @@ export function AdminUsers() {
   };
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { email: string; name: string; password: string; pin: string }) => {
+    mutationFn: async (userData: { email: string; name: string; password: string; pin: string; role: AppRole; campanha_id: string | null }) => {
       const { data, error } = await supabase.functions.invoke('create-user', { body: userData });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -319,6 +321,8 @@ export function AdminUsers() {
     setNewUserName("");
     setNewUserPassword("");
     setNewUserPin(generatePin());
+    setNewUserRole("supporter");
+    setNewUserCampanhaId(activeCampanhaId || "");
   };
 
   const copyPin = (pin: string) => {
@@ -401,13 +405,46 @@ export function AdminUsers() {
                     <Button type="button" variant="outline" size="icon" onClick={() => copyPin(newUserPin)} title="Copiar PIN">
                       <Copy className="w-4 h-4" />
                     </Button>
-                  </div>
+                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Campanha</Label>
+                  <Select value={newUserCampanhaId} onValueChange={setNewUserCampanhaId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a campanha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {campanhas?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Função</Label>
+                  <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as AppRole)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a função" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_OPTIONS.filter(r => isMaster || !r.masterOnly).map(r => (
+                        <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
                 <Button
-                  onClick={() => createUserMutation.mutate({ email: newUserEmail, name: newUserName, password: newUserPassword, pin: newUserPin })}
+                  onClick={() => createUserMutation.mutate({
+                    email: newUserEmail,
+                    name: newUserName,
+                    password: newUserPassword,
+                    pin: newUserPin,
+                    role: newUserRole,
+                    campanha_id: newUserCampanhaId || null,
+                  })}
                   disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPassword.length < 6 || newUserPin.length !== 4}
                 >
                   {createUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
