@@ -456,11 +456,85 @@ const Supporters = () => {
       </div>
 
       <Dialog open={!!viewingSupporter} onOpenChange={(open) => { if (!open) setViewingSupporter(null); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{viewingSupporter?.nome}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg">{viewingSupporter?.nome}</DialogTitle>
+              {viewingSupporter?.funcao_politica && (
+                <Badge variant="secondary" className="gap-1 text-xs shrink-0">
+                  {viewingSupporter.funcao_politica}
+                </Badge>
+              )}
+            </div>
           </DialogHeader>
-          <ProfileDataCard supporter={viewingSupporter} userEmail={null} />
+          {viewingSupporter && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+              {viewingSupporter.email && (
+                <div className="flex items-start gap-3 py-2">
+                  <Mail className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-sm font-medium break-words">{viewingSupporter.email}</p>
+                  </div>
+                </div>
+              )}
+              {viewingSupporter.endereco && (
+                <div className="flex items-start gap-3 py-2">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Endereço</p>
+                    <p className="text-sm font-medium break-words">
+                      {[viewingSupporter.endereco, viewingSupporter.bairro].filter(Boolean).join(", ")}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {viewingSupporter.telefone && (
+                <div className="flex items-start gap-3 py-2">
+                  <Phone className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Telefone</p>
+                    <p className="text-sm font-medium">{viewingSupporter.telefone}</p>
+                  </div>
+                </div>
+              )}
+              {viewingSupporter.cidade && (
+                <div className="flex items-start gap-3 py-2">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Cidade / UF</p>
+                    <p className="text-sm font-medium">
+                      {[viewingSupporter.cidade, viewingSupporter.estado].filter(Boolean).join("/")}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {viewingSupporter.cpf && (
+                <div className="flex items-start gap-3 py-2">
+                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">CPF</p>
+                    <p className="text-sm font-medium">{viewingSupporter.cpf}</p>
+                  </div>
+                </div>
+              )}
+              {viewingSupporter.funcao_politica && (
+                <div className="flex items-start gap-3 py-2">
+                  <Users className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Função Política</p>
+                    <p className="text-sm font-medium">{viewingSupporter.funcao_politica}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {viewingSupporter?.observacao && (
+            <div className="pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1">Observação</p>
+              <p className="text-sm whitespace-pre-wrap">{viewingSupporter.observacao}</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
