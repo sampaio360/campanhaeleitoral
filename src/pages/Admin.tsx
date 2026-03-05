@@ -5,21 +5,18 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { Navbar } from "@/components/Navbar";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Link2, Shield, FileText, LayoutDashboard } from "lucide-react";
+import { Building2, Users, Shield, FileText, LayoutDashboard } from "lucide-react";
 import { AdminUsers } from "@/components/admin/AdminUsers";
-import { AdminPermissions } from "@/components/admin/AdminPermissions";
 import { AdminCampanhas } from "@/components/admin/AdminCampanhas";
-import { AdminUserCampanhas } from "@/components/admin/AdminUserCampanhas";
-import { AdminHierarchy } from "@/components/admin/AdminHierarchy";
-import { AdminUserSupporters } from "@/components/admin/AdminUserSupporters";
+import { AdminAccessControl } from "@/components/admin/AdminAccessControl";
+import { AdminUserAccessControl } from "@/components/admin/AdminUserAccessControl";
 import { AdminExternalForm } from "@/components/admin/AdminExternalForm";
 import { AdminDashboardWidgets } from "@/components/admin/AdminDashboardWidgets";
 
 const adminTabs = [
   { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas", masterOnly: true },
-  { value: "users", label: "Usuários", icon: Users, step: 2, hint: "Cadastre, vincule e organize seus usuários", route: "/admin?tab=users" },
-  { value: "access", label: "Acesso", icon: Link2, step: 3, hint: "Vincule usuários às campanhas", route: "/admin?tab=access" },
-  { value: "permissions", label: "Permissões", icon: Shield, step: 4, hint: "Defina funções e controle de acesso", route: "/admin?tab=permissions" },
+  { value: "users", label: "Usuários", icon: Users, step: 2, hint: "Cadastre, vincule campanhas, atribua funções e gerencie acessos", route: "/admin?tab=users" },
+  { value: "permissions", label: "Permissões", icon: Shield, step: 3, hint: "Controle de acesso por função e por usuário", route: "/admin?tab=permissions" },
   { value: "external-form", label: "Form Externo", icon: FileText, hint: "Configure formulário público", route: "/admin?tab=external-form" },
   { value: "dashboard-widgets", label: "Dashboard", icon: LayoutDashboard, hint: "Ative ou desative widgets do Dashboard", route: "/admin?tab=dashboard-widgets" },
 ];
@@ -96,15 +93,17 @@ const Admin = () => {
           )}
 
           <TabsContent value="campanhas"><AdminCampanhas /></TabsContent>
-          <TabsContent value="users">
-            <div className="space-y-8">
-              <AdminUsers />
-              <AdminUserSupporters />
-              <AdminHierarchy />
-            </div>
+          <TabsContent value="users"><AdminUsers /></TabsContent>
+          <TabsContent value="permissions">
+            <Tabs defaultValue="access" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="access" className="gap-2">Por Função</TabsTrigger>
+                <TabsTrigger value="user-access" className="gap-2">Por Usuário</TabsTrigger>
+              </TabsList>
+              <TabsContent value="access"><AdminAccessControl /></TabsContent>
+              <TabsContent value="user-access"><AdminUserAccessControl /></TabsContent>
+            </Tabs>
           </TabsContent>
-          <TabsContent value="access"><AdminUserCampanhas /></TabsContent>
-          <TabsContent value="permissions"><AdminPermissions /></TabsContent>
           <TabsContent value="external-form"><AdminExternalForm /></TabsContent>
           <TabsContent value="dashboard-widgets"><AdminDashboardWidgets /></TabsContent>
         </Tabs>

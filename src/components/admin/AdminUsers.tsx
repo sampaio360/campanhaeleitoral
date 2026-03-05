@@ -9,8 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Loader2, Trash2, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
+import {
+  UserPlus, Loader2, Trash2, RefreshCw, Copy, Eye, EyeOff,
+  Plus, X, Ban, ShieldCheck, UserCheck, Link2, Unlink, Search, Filter
+} from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,145 +23,294 @@ import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-interface UserWithRoles {
-  id: string;
-  name: string;
-  email?: string;
-  pin?: string;
-  candidate_id: string | null;
-  campanha_id: string | null;
-  created_at: string;
-  roles: AppRole[];
-  candidateName?: string;
-}
-
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+const ROLE_OPTIONS: { value: AppRole; label: string; masterOnly?: boolean }[] = [
+  { value: "supporter", label: "Apoiador" },
+  { value: "political_leader", label: "Liderança Política" },
+  { value: "local_coordinator", label: "Coordenador Local" },
+  { value: "supervisor", label: "Supervisor de Área" },
+  { value: "coordinator", label: "Coordenador Geral" },
+  { value: "candidate", label: "Candidato" },
+  { value: "admin", label: "Administrador", masterOnly: true },
+  { value: "master", label: "Master", masterOnly: true },
+];
+
+const getRoleBadgeVariant = (role: AppRole) => {
+  switch (role) {
+    case 'master': case 'admin': return 'destructive' as const;
+    case 'candidate': case 'coordinator': return 'default' as const;
+    case 'local_coordinator': case 'political_leader': return 'outline' as const;
+    default: return 'secondary' as const;
+  }
+};
+
+const getRoleLabel = (role: AppRole) => {
+  return ROLE_OPTIONS.find(r => r.value === role)?.label || role;
+};
+
 export function AdminUsers() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // Filters
+  const [nameFilter, setNameFilter] = useState("");
+  const [campaignFilter, setCampaignFilter] = useState("__all__");
+  const [roleFilter, setRoleFilter] = useState("__all__");
+
+  // Create user dialog
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserPin, setNewUserPin] = useState(generatePin());
+
+  // Supporter linking dialog
+  const [linkingUserId, setLinkingUserId] = useState<string | null>(null);
+  const [supporterSearch, setSupporterSearch] = useState("");
+
+  // Role add popover
+  const [addingRoleUserId, setAddingRoleUserId] = useState<string | null>(null);
+  const [newRole, setNewRole] = useState<AppRole>("supporter");
+
+  // Campaign change popover
+  const [changingCampaignUserId, setChangingCampaignUserId] = useState<string | null>(null);
+
+  // PIN visibility
   const [showPins, setShowPins] = useState<Record<string, boolean>>({});
+
   const { toast } = useToast();
   const { isMaster } = useAuth();
   const queryClient = useQueryClient();
-
-  const { user: authUser } = useAuth();
   const activeCampanhaId = useActiveCampanhaId();
 
-  // No longer need to fetch all admin campaigns - we use activeCampanhaId directly
-
-  // Fetch all user_campanhas for cross-reference (only for non-master)
-  const { data: allUserCampanhas } = useQuery({
-    queryKey: ['admin-all-user-campanhas'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_campanhas')
-        .select('user_id, campanha_id');
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: users, isLoading: loadingUsers } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: async () => {
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      if (rolesError) throw rolesError;
-
-      const usersWithRoles: UserWithRoles[] = profiles?.map((profile: any) => ({
-        ...profile,
-        roles: roles?.filter(r => r.user_id === profile.id).map(r => r.role) || [],
-      })) || [];
-
-      return usersWithRoles;
-    }
-  });
-
-  // Filter users: master sees all, admin sees only users from their campaigns
-  // Filter users: master sees all, admin sees only users from active campaign
-  const filteredUsers = (() => {
-    if (!users) return [];
-    if (isMaster) return users;
-    if (!activeCampanhaId) return [];
-    return users.filter(u => {
-      if (u.campanha_id === activeCampanhaId) return true;
-      if (allUserCampanhas?.some(uc => uc.user_id === u.id && uc.campanha_id === activeCampanhaId)) return true;
-      return false;
-    });
-  })();
+  // ── Data fetching ──────────────────────────────────────────────
 
   const { data: campanhas } = useQuery({
     queryKey: ['admin-campanhas-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('campanhas')
-        .select('id, nome')
-        .is('deleted_at', null)
-        .order('nome');
+      const { data, error } = await supabase.from('campanhas').select('id, nome').is('deleted_at', null).order('nome');
       if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
+  const { data: allUserCampanhas } = useQuery({
+    queryKey: ['admin-all-user-campanhas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('user_campanhas').select('user_id, campanha_id, id');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: async () => {
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (pErr) throw pErr;
+
+      const { data: roles, error: rErr } = await supabase.from('user_roles').select('*');
+      if (rErr) throw rErr;
+
+      // Fetch linked supporter names
+      const supporterIds = profiles?.filter(p => p.supporter_id).map(p => p.supporter_id!) || [];
+      let supportersMap: Record<string, string> = {};
+      if (supporterIds.length > 0) {
+        const { data: supporters } = await supabase.from('supporters').select('id, nome').in('id', supporterIds);
+        supporters?.forEach(s => { supportersMap[s.id] = s.nome; });
+      }
+
+      return profiles?.map((profile: any) => ({
+        id: profile.id,
+        name: profile.name,
+        email: profile.email,
+        pin: profile.pin,
+        campanha_id: profile.campanha_id,
+        candidate_id: profile.candidate_id,
+        supporter_id: profile.supporter_id,
+        blocked_at: profile.blocked_at || null,
+        created_at: profile.created_at,
+        roles: roles?.filter(r => r.user_id === profile.id) || [],
+        supporterName: profile.supporter_id ? supportersMap[profile.supporter_id] || null : null,
+      })) || [];
+    }
+  });
+
+  // Supporters for linking dialog
+  const { data: supporters } = useQuery({
+    queryKey: ['admin-supporters-for-link', linkingUserId],
+    enabled: !!linkingUserId,
+    queryFn: async () => {
+      const user = users?.find(u => u.id === linkingUserId);
+      let query = supabase.from('supporters').select('id, nome, telefone, bairro, cidade').order('nome');
+      if (user?.campanha_id) query = query.eq('campanha_id', user.campanha_id);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // ── Filter logic ──────────────────────────────────────────────
+
+  const filteredUsers = (() => {
+    if (!users) return [];
+    let list = users;
+
+    // Scope: non-master admins only see users from active campaign
+    if (!isMaster) {
+      if (!activeCampanhaId) return [];
+      list = list.filter(u => {
+        if (u.campanha_id === activeCampanhaId) return true;
+        if (allUserCampanhas?.some(uc => uc.user_id === u.id && uc.campanha_id === activeCampanhaId)) return true;
+        return false;
+      });
+    }
+
+    // Name filter
+    if (nameFilter) {
+      const q = nameFilter.toLowerCase();
+      list = list.filter(u => u.name.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q));
+    }
+
+    // Campaign filter
+    if (campaignFilter !== "__all__") {
+      list = list.filter(u => {
+        if (u.campanha_id === campaignFilter) return true;
+        if (allUserCampanhas?.some(uc => uc.user_id === u.id && uc.campanha_id === campaignFilter)) return true;
+        return false;
+      });
+    }
+
+    // Role filter
+    if (roleFilter !== "__all__") {
+      list = list.filter(u => u.roles.some(r => r.role === roleFilter));
+    }
+
+    return list;
+  })();
+
+  // ── Mutations ──────────────────────────────────────────────────
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-all-user-campanhas'] });
+  };
+
   const createUserMutation = useMutation({
     mutationFn: async (userData: { email: string; name: string; password: string; pin: string }) => {
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: userData,
-      });
-
+      const { data, error } = await supabase.functions.invoke('create-user', { body: userData });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setIsDialogOpen(false);
-      resetForm();
+      invalidateAll();
+      setIsCreateOpen(false);
+      resetCreateForm();
       toast({ title: "Usuário criado com sucesso!" });
     },
     onError: (error: any) => {
-      toast({
-        title: "Erro ao criar usuário",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Erro ao criar usuário", description: error.message, variant: "destructive" });
     }
   });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke('delete-user', {
-        body: { user_id: userId },
-      });
+      const { data, error } = await supabase.functions.invoke('delete-user', { body: { user_id: userId } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: "Usuário excluído com sucesso!" });
+      invalidateAll();
+      toast({ title: "Usuário excluído!" });
     },
     onError: (error: any) => {
-      toast({ title: "Erro ao excluir usuário", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     }
   });
 
-  const resetForm = () => {
+  const blockUserMutation = useMutation({
+    mutationFn: async ({ userId, block }: { userId: string; block: boolean }) => {
+      const { data, error } = await supabase.functions.invoke('block-user', { body: { user_id: userId, block } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: (_, { block }) => {
+      invalidateAll();
+      toast({ title: block ? "Usuário bloqueado!" : "Usuário desbloqueado!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const changeCampaignMutation = useMutation({
+    mutationFn: async ({ userId, campanhaId }: { userId: string; campanhaId: string | null }) => {
+      const { error } = await supabase.from('profiles').update({ campanha_id: campanhaId }).eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast({ title: "Campanha atualizada!" });
+      setChangingCampaignUserId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const addRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const { data: existing } = await supabase.from('user_roles').select('id').eq('user_id', userId).eq('role', role).maybeSingle();
+      if (existing) throw new Error('Já possui esta função');
+      const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast({ title: "Função adicionada!" });
+      setAddingRoleUserId(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const removeRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      const { error } = await supabase.from('user_roles').delete().eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      toast({ title: "Função removida!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const linkSupporterMutation = useMutation({
+    mutationFn: async ({ userId, supporterId }: { userId: string; supporterId: string | null }) => {
+      const { error } = await supabase.from('profiles').update({ supporter_id: supporterId }).eq('id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidateAll();
+      setLinkingUserId(null);
+      toast({ title: "Vínculo atualizado!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────
+
+  const resetCreateForm = () => {
     setNewUserEmail("");
     setNewUserName("");
     setNewUserPassword("");
@@ -168,33 +322,23 @@ export function AdminUsers() {
     toast({ title: "PIN copiado!" });
   };
 
-  const getRoleBadgeVariant = (role: AppRole) => {
-    switch (role) {
-      case 'master': return 'destructive';
-      case 'admin': return 'destructive';
-      case 'candidate': return 'default';
-      case 'coordinator': return 'default';
-      case 'local_coordinator': return 'outline';
-      case 'political_leader': return 'outline';
-      case 'supervisor': return 'secondary';
-      default: return 'secondary';
-    }
+  const getUserCampanhas = (userId: string, profileCampanhaId: string | null) => {
+    const ids = new Set<string>();
+    if (profileCampanhaId) ids.add(profileCampanhaId);
+    allUserCampanhas?.filter(uc => uc.user_id === userId).forEach(uc => ids.add(uc.campanha_id));
+    return Array.from(ids).map(id => campanhas?.find(c => c.id === id)).filter(Boolean) as { id: string; nome: string }[];
   };
 
-  const getRoleLabel = (role: AppRole) => {
-    switch (role) {
-      case 'master': return 'Master (Desenvolvedor)';
-      case 'admin': return 'Administrador de Sistema';
-      case 'candidate': return 'Candidato';
-      case 'coordinator': return 'Coordenador Geral';
-      case 'local_coordinator': return 'Coordenador Local';
-      case 'political_leader': return 'Liderança Política';
-      case 'supervisor': return 'Supervisor de Área';
-      default: return 'Apoiador';
-    }
-  };
+  const filteredSupporters = supporters?.filter(s =>
+    s.nome.toLowerCase().includes(supporterSearch.toLowerCase()) ||
+    s.telefone?.includes(supporterSearch) ||
+    s.bairro?.toLowerCase().includes(supporterSearch.toLowerCase()) ||
+    s.cidade?.toLowerCase().includes(supporterSearch.toLowerCase())
+  ) || [];
 
-  if (loadingUsers) {
+  // ── Render ─────────────────────────────────────────────────────
+
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -205,234 +349,381 @@ export function AdminUsers() {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Usuários</CardTitle>
-          <CardDescription>Gerencie os usuários do sistema</CardDescription>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              Novo Usuário
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Usuário</DialogTitle>
-              <DialogDescription>
-                Preencha os dados e gere um PIN de acesso
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  placeholder="Nome completo"
-                  value={newUserName}
-                  onChange={(e) => setNewUserName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="usuario@email.com"
-                  value={newUserEmail}
-                  onChange={(e) => setNewUserEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha (mín. 6 caracteres)</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••"
-                  value={newUserPassword}
-                  onChange={(e) => setNewUserPassword(e.target.value)}
-                  minLength={6}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>PIN de Acesso (4 dígitos)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newUserPin}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      setNewUserPin(v);
-                    }}
-                    maxLength={4}
-                    className="font-mono text-lg tracking-widest text-center"
-                    placeholder="0000"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setNewUserPin(generatePin())}
-                    title="Gerar novo PIN"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => copyPin(newUserPin)}
-                    title="Copiar PIN"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+    <>
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle>Usuários</CardTitle>
+            <CardDescription>Gerencie usuários, funções, campanhas e vínculos</CardDescription>
+          </div>
+          <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (open) resetCreateForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <UserPlus className="w-4 h-4" />
+                Novo Usuário
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Usuário</DialogTitle>
+                <DialogDescription>Preencha os dados e gere um PIN de acesso</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome</Label>
+                  <Input id="name" placeholder="Nome completo" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="usuario@email.com" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha (mín. 6 caracteres)</Label>
+                  <Input id="password" type="password" placeholder="••••••" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} minLength={6} />
+                </div>
+                <div className="space-y-2">
+                  <Label>PIN de Acesso (4 dígitos)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newUserPin}
+                      onChange={(e) => setNewUserPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      maxLength={4}
+                      className="font-mono text-lg tracking-widest text-center"
+                      placeholder="0000"
+                    />
+                    <Button type="button" variant="outline" size="icon" onClick={() => setNewUserPin(generatePin())} title="Gerar novo PIN">
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                    <Button type="button" variant="outline" size="icon" onClick={() => copyPin(newUserPin)} title="Copiar PIN">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Após criar o usuário, atribua a função e campanha nas abas "Permissões" e "Acesso".
-              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
+                <Button
+                  onClick={() => createUserMutation.mutate({ email: newUserEmail, name: newUserName, password: newUserPassword, pin: newUserPin })}
+                  disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPassword.length < 6 || newUserPin.length !== 4}
+                >
+                  {createUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Criar Usuário
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+
+        {/* ── Filtros ─────────────────────────────────────────── */}
+        <div className="px-6 pb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                value={nameFilter}
+                onChange={(e) => setNameFilter(e.target.value)}
+                className="pl-9"
+              />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Campanha" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas campanhas</SelectItem>
+                {campanhas?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Função" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Todas funções</SelectItem>
+                {ROLE_OPTIONS.map(r => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {(nameFilter || campaignFilter !== "__all__" || roleFilter !== "__all__") && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{filteredUsers.length} resultado(s)</span>
+              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setNameFilter(""); setCampaignFilter("__all__"); setRoleFilter("__all__"); }}>
+                Limpar filtros
               </Button>
-              <Button
-                onClick={() => createUserMutation.mutate({
-                  email: newUserEmail,
-                  name: newUserName,
-                  password: newUserPassword,
-                  pin: newUserPin,
-                })}
-                disabled={createUserMutation.isPending || !newUserEmail || !newUserName || newUserPassword.length < 6 || newUserPin.length !== 4}
-              >
-                {createUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Criar Usuário
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Campanha</TableHead>
-              <TableHead>PIN</TableHead>
-              <TableHead>Funções</TableHead>
-              <TableHead>Criado em</TableHead>
-              {isMaster && <TableHead>Ações</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers?.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell className="text-muted-foreground">{user.email || '—'}</TableCell>
-                <TableCell>
-                  {(() => {
-                    // Collect all campaign IDs for this user
-                    const campIds = new Set<string>();
-                    if (user.campanha_id) campIds.add(user.campanha_id);
-                    allUserCampanhas?.filter(uc => uc.user_id === user.id).forEach(uc => campIds.add(uc.campanha_id));
-                    
-                    if (campIds.size === 0) return <span className="text-muted-foreground">—</span>;
-                    
-                    // Only show campaigns that exist in the active list
-                    const resolved = Array.from(campIds)
-                      .map(cid => ({ id: cid, nome: campanhas?.find(c => c.id === cid)?.nome }))
-                      .filter(c => !!c.nome);
-                    
-                    if (resolved.length === 0) return <span className="text-muted-foreground">—</span>;
-                    
-                    return (
-                      <div className="flex gap-1 flex-wrap">
-                        {resolved.map(c => (
-                          <Badge key={c.id} variant="outline">
-                            {c.nome}
+            </div>
+          )}
+        </div>
+
+        {/* ── Tabela ──────────────────────────────────────────── */}
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Campanha</TableHead>
+                <TableHead>PIN</TableHead>
+                <TableHead>Funções</TableHead>
+                <TableHead>Pessoa</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Criado em</TableHead>
+                {isMaster && <TableHead>Ações</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => {
+                const userCamps = getUserCampanhas(user.id, user.campanha_id);
+                const isBlocked = !!user.blocked_at;
+
+                return (
+                  <TableRow key={user.id} className={isBlocked ? "opacity-60" : ""}>
+                    {/* Nome + Email */}
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.email || '—'}</p>
+                      </div>
+                    </TableCell>
+
+                    {/* Campanha */}
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {userCamps.length === 0 && <span className="text-xs text-muted-foreground">—</span>}
+                        {userCamps.map(c => (
+                          <Badge key={c.id} variant="outline" className="text-xs">{c.nome}</Badge>
+                        ))}
+                        <Popover open={changingCampaignUserId === user.id} onOpenChange={(open) => setChangingCampaignUserId(open ? user.id : null)}>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Alterar campanha">
+                              <RefreshCw className="w-3 h-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-3" align="start">
+                            <p className="text-xs font-medium mb-2">Campanha principal</p>
+                            <Select
+                              value={user.campanha_id || "__none__"}
+                              onValueChange={(v) => {
+                                changeCampaignMutation.mutate({ userId: user.id, campanhaId: v === "__none__" ? null : v });
+                              }}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">Nenhuma</SelectItem>
+                                {campanhas?.map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </TableCell>
+
+                    {/* PIN */}
+                    <TableCell>
+                      {user.pin ? (
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-sm">{showPins[user.id] ? user.pin : '••••'}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setShowPins(p => ({ ...p, [user.id]: !p[user.id] }))}>
+                            {showPins[user.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyPin(user.pin!)}>
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : '—'}
+                    </TableCell>
+
+                    {/* Funções */}
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {user.roles.map((r) => (
+                          <Badge key={r.id} variant={getRoleBadgeVariant(r.role)} className="gap-1 text-xs">
+                            {getRoleLabel(r.role)}
+                            <button
+                              onClick={() => { if (confirm(`Remover função "${getRoleLabel(r.role)}"?`)) removeRoleMutation.mutate(r.id); }}
+                              className="ml-0.5 hover:text-destructive-foreground"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
                           </Badge>
                         ))}
+                        <Popover open={addingRoleUserId === user.id} onOpenChange={(open) => { setAddingRoleUserId(open ? user.id : null); setNewRole("supporter"); }}>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Adicionar função">
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-3" align="start">
+                            <p className="text-xs font-medium mb-2">Adicionar função</p>
+                            <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
+                              <SelectTrigger className="w-full mb-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ROLE_OPTIONS.filter(r => !r.masterOnly || isMaster).map(r => (
+                                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => addRoleMutation.mutate({ userId: user.id, role: newRole })}
+                              disabled={addRoleMutation.isPending}
+                            >
+                              {addRoleMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Confirmar"}
+                            </Button>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    );
-                  })()}
-                </TableCell>
-                <TableCell>
-                  {user.pin ? (
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono">
-                        {showPins[user.id] ? user.pin : '••••'}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setShowPins(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
-                      >
-                        {showPins[user.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => copyPin(user.pin!)}
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : '—'}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1 flex-wrap">
-                    {user.roles.map((role) => (
-                      <Badge key={role} variant={getRoleBadgeVariant(role)}>
-                        {getRoleLabel(role)}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                </TableCell>
-                {isMaster && (
-                  <TableCell>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir <strong>{user.name}</strong>? Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteUserMutation.mutate(user.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    </TableCell>
+
+                    {/* Pessoa vinculada */}
+                    <TableCell>
+                      {user.supporterName ? (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="default" className="gap-1 text-xs">
+                            <UserCheck className="w-3 h-3" />
+                            {user.supporterName}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-destructive"
+                            onClick={() => linkSupporterMutation.mutate({ userId: user.id, supporterId: null })}
+                            title="Desvincular"
                           >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {filteredUsers?.length === 0 && (
-          <p className="text-center text-muted-foreground py-8">
-            Nenhum usuário encontrado
-          </p>
-        )}
-      </CardContent>
-    </Card>
+                            <Unlink className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs gap-1"
+                          onClick={() => { setLinkingUserId(user.id); setSupporterSearch(""); }}
+                        >
+                          <Link2 className="w-3 h-3" />
+                          Vincular
+                        </Button>
+                      )}
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell>
+                      {isBlocked ? (
+                        <Badge variant="destructive" className="gap-1 text-xs">
+                          <Ban className="w-3 h-3" />
+                          Bloqueado
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1 text-xs">
+                          <ShieldCheck className="w-3 h-3" />
+                          Ativo
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 ml-1"
+                        onClick={() => blockUserMutation.mutate({ userId: user.id, block: !isBlocked })}
+                        disabled={blockUserMutation.isPending}
+                        title={isBlocked ? "Desbloquear" : "Bloquear"}
+                      >
+                        <Ban className="w-3 h-3" />
+                      </Button>
+                    </TableCell>
+
+                    {/* Criado em */}
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+
+                    {/* Ações */}
+                    {isMaster && (
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir <strong>{user.name}</strong>? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteUserMutation.mutate(user.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          {filteredUsers.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">Nenhum usuário encontrado</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Dialog: Vincular Pessoa ───────────────────────────── */}
+      <Dialog open={!!linkingUserId} onOpenChange={(open) => { if (!open) setLinkingUserId(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular a Pessoa</DialogTitle>
+            <DialogDescription>
+              Busque pelo nome para vincular ao usuário{" "}
+              <strong>{users?.find(u => u.id === linkingUserId)?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Buscar pelo nome..." value={supporterSearch} onValueChange={setSupporterSearch} />
+            <CommandList>
+              <CommandEmpty>Nenhuma pessoa encontrada.</CommandEmpty>
+              <CommandGroup>
+                {filteredSupporters.map((s) => (
+                  <CommandItem
+                    key={s.id}
+                    value={s.nome}
+                    onSelect={() => linkSupporterMutation.mutate({ userId: linkingUserId!, supporterId: s.id })}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{s.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {[s.bairro, s.cidade].filter(Boolean).join(', ') || 'Sem localização'}
+                        {s.telefone ? ` • ${s.telefone}` : ''}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkingUserId(null)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

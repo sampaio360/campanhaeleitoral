@@ -1,8 +1,6 @@
 export { AdminUsers } from "./AdminUsers";
-export { AdminPermissions } from "./AdminPermissions";
-export { AdminRoleAssignment } from "./AdminRoleAssignment";
 export { AdminAccessControl } from "./AdminAccessControl";
+export { AdminUserAccessControl } from "./AdminUserAccessControl";
 export { AdminCampanhas } from "./AdminCampanhas";
-export { AdminUserCampanhas } from "./AdminUserCampanhas";
-export { AdminHierarchy } from "./AdminHierarchy";
-export { AdminUserSupporters } from "./AdminUserSupporters";
+export { AdminExternalForm } from "./AdminExternalForm";
+export { AdminDashboardWidgets } from "./AdminDashboardWidgets";
