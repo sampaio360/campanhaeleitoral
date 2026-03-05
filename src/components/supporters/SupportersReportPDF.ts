@@ -55,8 +55,8 @@ export function generateSupportersReport(opts: ReportOptions) {
         ${s.funcao_politica ? `<br/><span style="font-size:11px;color:#64748b">${s.funcao_politica}</span>` : ""}
       </td>
       <td>${s.telefone || "—"}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${s.email || "—"}</td>
-      <td>${[s.bairro, s.cidade].filter(Boolean).join(", ") || "—"}</td>
+      <td>${s.funcao_politica || "—"}</td>
+      <td>${s.cidade || "—"}</td>
       
     </tr>`
     )
@@ -300,8 +300,8 @@ export function generateSupportersReport(opts: ReportOptions) {
             <th style="width:40px">#</th>
             <th>Nome / Função</th>
             <th>Telefone</th>
-            <th>E-mail</th>
-            <th>Localidade</th>
+            <th>Função Política</th>
+            <th>Cidade</th>
             
           </tr>
         </thead>
