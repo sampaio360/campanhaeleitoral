@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin } from "lucide-react";
+import { MapPin, Maximize2, Minimize2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.heat";
@@ -21,6 +22,14 @@ interface LeafletHeatmapProps {
 export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Invalidate map size when toggling fullscreen
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+    }
+  }, [fullscreen]);
 
   const validPoints = data.filter(
     (d) => d.latitude != null && d.longitude != null
@@ -135,13 +144,22 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={fullscreen ? "fixed inset-0 z-50 rounded-none flex flex-col" : ""}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <MapPin className="w-5 h-5" /> Mapa de Calor — Apoiadores
         </CardTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => setFullscreen((f) => !f)}
+          title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+        >
+          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className={fullscreen ? "flex-1 min-h-0" : ""}>
         {validPoints.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <MapPin className="w-10 h-10 mb-2 opacity-40" />
@@ -149,7 +167,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
             <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
           </div>
         ) : (
-          <div ref={mapRef} className="h-80 rounded-lg overflow-hidden" />
+          <div ref={mapRef} className={`rounded-lg overflow-hidden ${fullscreen ? "h-full" : "h-80"}`} />
         )}
       </CardContent>
     </Card>
