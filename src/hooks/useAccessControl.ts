@@ -56,11 +56,9 @@ export function useAccessControl() {
     local_coordinator: ['/admin', '/roi'],
   };
 
-  const isAdmin = userRoles?.includes('admin');
-
   const canAccess = useCallback((route: string): boolean => {
-    // 1. Master and Admin always have access
-    if (isMaster || isAdmin) return true;
+    // 1. Master always has access
+    if (isMaster) return true;
 
     // 2. If user has no roles, allow access by default (new users)
     if (!userRoles || userRoles.length === 0) return true;
@@ -107,7 +105,7 @@ export function useAccessControl() {
     }
 
     return true;
-  }, [rules, userRules, userRoles, isMaster, isAdmin]);
+  }, [rules, userRules, userRoles, isMaster]);
 
   return { canAccess, isLoading: isLoadingRoles || isLoadingUser };
 }
