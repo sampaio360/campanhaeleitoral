@@ -11,7 +11,7 @@ import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Copy, Link2, Trash2, Plus } from "lucide-react";
+import { Loader2, Copy, Link2, Trash2, Plus, ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -157,10 +157,11 @@ export function AdminExternalForm() {
     setFields(updated);
   };
 
-  const copyLink = (token: string, type: "convite" | "cadastro") => {
+  const copyLink = (token: string, type: "convite" | "cadastro" | "coleta") => {
     const url = `${BASE_URL}/${type}/${token}`;
     navigator.clipboard.writeText(url);
-    toast({ title: "Link copiado!" });
+    const labels = { convite: "Convite (criar conta)", cadastro: "Cadastro completo", coleta: "Coleta de dados" };
+    toast({ title: `Link copiado: ${labels[type]}` });
   };
 
   if (isLoading) {
@@ -291,11 +292,14 @@ export function AdminExternalForm() {
                           <TableCell>
                             {!isUsed && !isExpired && (
                               <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" title="Copiar link — Criar Conta (com login)" onClick={() => copyLink(link.token, "convite")}>
+                                <Button size="sm" variant="ghost" title="Criar Conta (com login)" onClick={() => copyLink(link.token, "convite")}>
                                   <Copy className="w-4 h-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" title="Copiar link — Coleta de Dados (sem conta)" onClick={() => copyLink(link.token, "cadastro")}>
+                                <Button size="sm" variant="ghost" title="Cadastro Completo (com conta)" onClick={() => copyLink(link.token, "cadastro")}>
                                   <Link2 className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" title="Coleta de Dados (sem conta)" onClick={() => copyLink(link.token, "coleta")}>
+                                  <ClipboardList className="w-4 h-4" />
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>

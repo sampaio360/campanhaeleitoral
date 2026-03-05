@@ -28,6 +28,7 @@ import Agenda from "./pages/Agenda";
 import Install from "./pages/Install";
 import Profile from "./pages/Profile";
 import ExternalRegister from "./pages/ExternalRegister";
+import ExternalDataCollection from "./pages/ExternalDataCollection";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
             <Route path="/convite/:token" element={<Invite />} />
             <Route path="/cadastro/:token" element={<ExternalRegister />} />
+            <Route path="/coleta/:token" element={<ExternalDataCollection />} />
             <Route path="/install" element={<Install />} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
