@@ -51,6 +51,12 @@ export function generateAgendaProtocol(opts: ProtocolOptions) {
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
+    html {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: #f8fafc;
