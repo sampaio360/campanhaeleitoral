@@ -14,6 +14,7 @@ import { UserPlus, Loader2, Trash2, RefreshCw, Copy, Eye, EyeOff } from "lucide-
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -44,24 +45,10 @@ export function AdminUsers() {
   const { isMaster } = useAuth();
   const queryClient = useQueryClient();
 
-  const { user: authUser, campanhaId } = useAuth();
+  const { user: authUser } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
 
-  // Fetch admin's campaigns (profile + user_campanhas)
-  const { data: adminCampaignIds } = useQuery({
-    queryKey: ['admin-my-campanhas', authUser?.id],
-    queryFn: async () => {
-      if (!authUser?.id) return [];
-      const { data, error } = await supabase
-        .from('user_campanhas')
-        .select('campanha_id')
-        .eq('user_id', authUser.id);
-      if (error) throw error;
-      const ids = new Set(data?.map(r => r.campanha_id) || []);
-      if (campanhaId) ids.add(campanhaId);
-      return Array.from(ids);
-    },
-    enabled: !!authUser?.id && !isMaster,
-  });
+  // No longer need to fetch all admin campaigns - we use activeCampanhaId directly
 
   // Fetch all user_campanhas for cross-reference (only for non-master)
   const { data: allUserCampanhas } = useQuery({
@@ -101,16 +88,14 @@ export function AdminUsers() {
   });
 
   // Filter users: master sees all, admin sees only users from their campaigns
+  // Filter users: master sees all, admin sees only users from active campaign
   const filteredUsers = (() => {
     if (!users) return [];
     if (isMaster) return users;
-    if (!adminCampaignIds?.length) return [];
-    const adminCampSet = new Set(adminCampaignIds);
+    if (!activeCampanhaId) return [];
     return users.filter(u => {
-      // Check profile campanha_id
-      if (u.campanha_id && adminCampSet.has(u.campanha_id)) return true;
-      // Check user_campanhas cross-reference
-      if (allUserCampanhas?.some(uc => uc.user_id === u.id && adminCampSet.has(uc.campanha_id))) return true;
+      if (u.campanha_id === activeCampanhaId) return true;
+      if (allUserCampanhas?.some(uc => uc.user_id === u.id && uc.campanha_id === activeCampanhaId)) return true;
       return false;
     });
   })();

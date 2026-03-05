@@ -16,7 +16,7 @@ import { AdminExternalForm } from "@/components/admin/AdminExternalForm";
 import { AdminDashboardWidgets } from "@/components/admin/AdminDashboardWidgets";
 
 const adminTabs = [
-  { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas" },
+  { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas", masterOnly: true },
   { value: "users", label: "Usuários", icon: Users, step: 2, hint: "Cadastre, vincule e organize seus usuários", route: "/admin?tab=users" },
   { value: "access", label: "Acesso", icon: Link2, step: 3, hint: "Vincule usuários às campanhas", route: "/admin?tab=access" },
   { value: "permissions", label: "Permissões", icon: Shield, step: 4, hint: "Defina funções e controle de acesso", route: "/admin?tab=permissions" },
@@ -25,11 +25,14 @@ const adminTabs = [
 ];
 
 const Admin = () => {
-  const { isAdmin, loading } = useAuth();
+  const { isAdmin, isMaster, loading } = useAuth();
   const { canAccess } = useAccessControl();
 
-  const visibleTabs = adminTabs.filter(tab => canAccess(tab.route));
-  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.value || "campanhas");
+  const visibleTabs = adminTabs.filter(tab => {
+    if ((tab as any).masterOnly && !isMaster) return false;
+    return canAccess(tab.route);
+  });
+  const [activeTab, setActiveTab] = useState(visibleTabs[0]?.value || "users");
 
   if (loading) {
     return (

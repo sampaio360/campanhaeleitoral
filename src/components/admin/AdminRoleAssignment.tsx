@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,27 +27,55 @@ export function AdminRoleAssignment() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedRole, setSelectedRole] = useState<AppRole>("supporter");
   const { isMaster } = useAuth();
+  const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch user IDs linked to active campaign (via profile or user_campanhas)
+  const { data: campaignUserIds } = useQuery({
+    queryKey: ['admin-campaign-users', activeCampanhaId],
+    queryFn: async () => {
+      if (!activeCampanhaId) return [];
+      const ids = new Set<string>();
+      // Users with profile.campanha_id = active
+      const { data: profileUsers } = await supabase.from('profiles').select('id').eq('campanha_id', activeCampanhaId);
+      profileUsers?.forEach(p => ids.add(p.id));
+      // Users linked via user_campanhas
+      const { data: ucUsers } = await supabase.from('user_campanhas').select('user_id').eq('campanha_id', activeCampanhaId);
+      ucUsers?.forEach(uc => ids.add(uc.user_id));
+      return Array.from(ids);
+    },
+    enabled: !!activeCampanhaId,
+  });
+
   const { data: userRoles, isLoading } = useQuery({
-    queryKey: ['admin-user-roles'],
+    queryKey: ['admin-user-roles', activeCampanhaId],
     queryFn: async () => {
       const { data: roles, error: rolesError } = await supabase.from('user_roles').select('*');
       if (rolesError) throw rolesError;
       const { data: profiles, error: profilesError } = await supabase.from('profiles').select('id, name');
       if (profilesError) throw profilesError;
       const profilesMap = new Map(profiles?.map(p => [p.id, p.name]) || []);
-      return (roles?.map(role => ({ ...role, userName: profilesMap.get(role.user_id) || 'Usuário desconhecido' })) || []) as UserRole[];
+      const allRoles = (roles?.map(role => ({ ...role, userName: profilesMap.get(role.user_id) || 'Usuário desconhecido' })) || []) as UserRole[];
+      // Filter: master sees all, admin sees only roles of users in active campaign
+      if (isMaster) return allRoles;
+      if (!campaignUserIds?.length) return [];
+      const userIdSet = new Set(campaignUserIds);
+      return allRoles.filter(r => userIdSet.has(r.user_id));
     }
   });
 
   const { data: profiles } = useQuery({
-    queryKey: ['admin-profiles-list'],
+    queryKey: ['admin-profiles-list', activeCampanhaId],
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles').select('id, name').order('name');
       if (error) throw error;
-      return data;
+      if (!data) return [];
+      // Filter: master sees all, admin sees only profiles in active campaign
+      if (isMaster) return data;
+      if (!campaignUserIds?.length) return [];
+      const userIdSet = new Set(campaignUserIds);
+      return data.filter(p => userIdSet.has(p.id));
     }
   });
 
