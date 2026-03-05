@@ -13,6 +13,7 @@ import { Navbar } from "@/components/Navbar";
 import { useQuery } from "@tanstack/react-query";
 import { SupporterForm, SupporterEditData } from "@/components/supporters/SupporterForm";
 import { generateSupportersReport } from "@/components/supporters/SupportersReportPDF";
+import { generateSupporterFicha } from "@/components/supporters/SupporterFichaPDF";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -461,6 +462,24 @@ const Supporters = () => {
             <DialogTitle>{viewingSupporter?.nome}</DialogTitle>
           </DialogHeader>
           <ProfileDataCard supporter={viewingSupporter} userEmail={null} bare />
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                if (!viewingSupporter) return;
+                generateSupporterFicha({
+                  supporter: viewingSupporter,
+                  campanhaNome: campanhaInfo?.nome,
+                  campanhaPartido: campanhaInfo?.partido || undefined,
+                });
+              }}
+            >
+              <Printer className="w-4 h-4" />
+              Imprimir Ficha
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
