@@ -1,58 +1,29 @@
 
 
-## Avaliacao e Plano: Isolamento por Campanha Ativa
+## Plano: Ajustes de Visibilidade no Admin
 
-### Situacao Atual
+### 1. Aba "Campanhas" visivel apenas para Master
 
-**O que ja funciona:**
-- Admin/Master com **1 campanha**: auto-selecionada no login (OK)
-- Admin/Master com **multiplas campanhas**: seletor disponivel no menu do usuario (submenu)
-- **11 modulos** ja usam `useActiveCampanhaId()` ou `selectedCampanhaId || campanhaId` corretamente
+**Arquivo:** `src/pages/Admin.tsx`
 
-**Problemas identificados (2 categorias):**
+Adicionar uma propriedade `masterOnly: true` na definicao da tab "campanhas" e filtrar no `visibleTabs` usando `isMaster` do `useAuth()`. Admins nao verao essa aba.
 
-#### Problema 1: Tela de selecao obrigatoria inexistente
-Admins com multiplas campanhas entram no sistema **sem campanha selecionada**. Os dados ficam vazios ou mostram tudo misturado ate que o admin va manualmente no menu do usuario e escolha. Nao ha uma tela bloqueante pedindo a selecao.
+### 2. Aba "Usuarios" -- Admin ve apenas usuarios da campanha ativa
 
-#### Problema 2: 8 modulos ignoram `selectedCampanhaId`
-Usam `campanhaId` direto do perfil, entao mesmo que o admin selecione outra campanha no menu, esses modulos continuam mostrando dados da campanha do perfil (ou nada, se o perfil nao tiver `campanha_id`).
+O `AdminUsers.tsx` ja possui logica de filtragem por campanha para admins (`filteredUsers`). Porem, usa `adminCampaignIds` (todas as campanhas do admin) em vez da campanha **ativa** (`selectedCampanhaId || campanhaId`). Corrigir para filtrar apenas pela campanha ativa, usando `useActiveCampanhaId()`.
 
-| # | Modulo | Arquivo | Problema |
-|---|--------|---------|----------|
-| 1 | Orcamentos | `useBudgetData.ts` | Usa `campanhaId` do perfil |
-| 2 | Receitas | `BudgetRevenues.tsx` | Idem |
-| 3 | Despesas (Financeiro) | `BudgetExpenses.tsx` | Idem |
-| 4 | Recursos | `Resources.tsx` | Idem |
-| 5 | Inventario | `MaterialInventory.tsx` | Idem |
-| 6 | Dashboard Data | `useDashboardData.ts` | So resolve para Master, exclui Admin |
-| 7 | Dashboard Alertas | `useDashboardAlerts.ts` | Idem |
-| 8 | Auditoria | `Audit.tsx` | Idem |
+**Arquivo:** `src/components/admin/AdminUsers.tsx`
+- Importar `useActiveCampanhaId`
+- No `filteredUsers`, filtrar por `activeCampanhaId` em vez de todas as campanhas do admin
 
----
+### 3. Aba "Permissoes" -- Admin so ve/atribui funcoes a usuarios da campanha ativa
 
-### Plano de Correcao
+**Arquivo:** `src/components/admin/AdminRoleAssignment.tsx`
 
-#### Parte 1: Tela bloqueante de selecao de campanha
+Atualmente, busca todos os profiles e todos os user_roles sem filtro de campanha. Corrigir:
 
-Criar um componente `CampaignGate` que intercepta no `ProtectedRoute`. Se o usuario for admin/master, nao tiver `campanha_id` no perfil, e `selectedCampanhaId` estiver vazio, exibe uma tela de selecao obrigatoria antes de permitir acesso ao sistema.
-
-- Arquivo: `src/components/CampaignGate.tsx` (novo)
-- Integrar em: `src/components/ProtectedRoute.tsx` (apos PinGate)
-- Exibe lista de campanhas vinculadas (admin via `user_campanhas`, master via todas)
-- Ao selecionar, chama `setSelectedCampanhaId` e o sistema continua
-
-#### Parte 2: Corrigir os 8 modulos com isolamento quebrado
-
-Substituir `campanhaId` de `useAuth()` por `useActiveCampanhaId()` em todos os 8 arquivos:
-
-1. **`useBudgetData.ts`** -- trocar `campanhaId` por `useActiveCampanhaId()`
-2. **`BudgetRevenues.tsx`** -- idem
-3. **`BudgetExpenses.tsx`** -- idem
-4. **`Resources.tsx`** -- idem
-5. **`MaterialInventory.tsx`** -- idem
-6. **`useDashboardData.ts`** -- trocar logica `isMaster && override` por `overrideCampanhaId || profileCampanhaId`
-7. **`useDashboardAlerts.ts`** -- idem
-8. **`Audit.tsx`** -- trocar por `selectedCampanhaId || profileCampanhaId`
-
-Todas as substituicoes seguem o padrao ja consolidado nos 11 modulos que funcionam. Para usuarios comuns (sem `selectedCampanhaId`), o comportamento e identico ao atual.
+- Importar `useActiveCampanhaId`
+- Buscar `user_campanhas` para a campanha ativa e cruzar com profiles, mostrando apenas usuarios vinculados a essa campanha
+- Filtrar a listagem de `userRoles` para exibir apenas roles de usuarios da campanha ativa
+- No dropdown de "Atribuir Funcao", listar apenas profiles da campanha ativa
 
