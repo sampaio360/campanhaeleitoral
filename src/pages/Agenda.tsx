@@ -19,8 +19,9 @@ import {
   CalendarDays, Plus, Search, Loader2, MapPin, Clock, User,
   ChevronLeft, ChevronRight, Megaphone, Users, Mic, Car, Handshake,
   Building2, PartyPopper, Flag, Coffee, Tv, FileText, MoreHorizontal,
-  AlertTriangle, CheckCircle, XCircle, Edit, Trash2, Crown, Phone
+  AlertTriangle, CheckCircle, XCircle, Edit, Trash2, Crown, Phone, Printer
 } from "lucide-react";
+import { generateAgendaProtocol } from "@/components/agenda/AgendaProtocolPDF";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, isToday, parseISO, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -101,6 +102,7 @@ const AgendaPage = () => {
   const [profileMap, setProfileMap] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState(true);
   const [allLiderancas, setAllLiderancas] = useState<Lideranca[]>([]);
+  const [campanhaInfo, setCampanhaInfo] = useState<{ nome: string; partido: string | null } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<AgendaEvent | null>(null);
   const [creating, setCreating] = useState(false);
@@ -147,10 +149,15 @@ const AgendaPage = () => {
     let profQuery = supabase.from("profiles").select("id, name") as any;
     if (activeCampanhaId) profQuery = profQuery.eq("campanha_id", activeCampanhaId);
 
-    const [evRes, profRes, liderRes] = await Promise.all([
+    let campanhaQuery = activeCampanhaId
+      ? supabase.from("campanhas").select("nome, partido").eq("id", activeCampanhaId).single()
+      : null;
+
+    const [evRes, profRes, liderRes, campanhaRes] = await Promise.all([
       evQuery,
       profQuery,
       liderQuery,
+      campanhaQuery,
     ]);
 
     setEvents((evRes.data || []) as AgendaEvent[]);
@@ -160,6 +167,7 @@ const AgendaPage = () => {
     profs.forEach((p) => (pMap[p.id] = p));
     setProfileMap(pMap);
     setAllLiderancas((liderRes.data || []) as (Lideranca & { cidade?: string })[]);
+    if (campanhaRes?.data) setCampanhaInfo(campanhaRes.data as { nome: string; partido: string | null });
     setLoading(false);
   }, [user, activeCampanhaId, isMaster, currentMonth]);
 
@@ -312,6 +320,22 @@ const AgendaPage = () => {
     }
   };
 
+  const handleGenerateProtocol = (ev: AgendaEvent) => {
+    const responsavel = ev.responsavel_id ? profileMap[ev.responsavel_id] : null;
+    const cfg = EVENT_TYPES[ev.tipo] || EVENT_TYPES.outro;
+    const stCfg = STATUS_CONFIG[ev.status] || STATUS_CONFIG.confirmado;
+    const priCfg = PRIORIDADE_CONFIG[ev.prioridade] || PRIORIDADE_CONFIG.normal;
+    generateAgendaProtocol({
+      event: ev,
+      campanhaNome: campanhaInfo?.nome,
+      campanhaPartido: campanhaInfo?.partido || undefined,
+      responsavelNome: responsavel?.name,
+      tipoLabel: cfg.label,
+      statusLabel: stCfg.label,
+      prioridadeLabel: priCfg.label,
+    });
+  };
+
   /* ───── Render helpers ───── */
 
   const renderEventBadge = (ev: AgendaEvent) => {
@@ -375,6 +399,9 @@ const AgendaPage = () => {
               {ev.notas && <p className="text-xs text-muted-foreground italic mt-1">{ev.notas}</p>}
             </div>
             <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" title="Gerar Protocolo PDF" onClick={() => handleGenerateProtocol(ev)}>
+                <Printer className="w-3.5 h-3.5" />
+              </Button>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(ev)}>
                 <Edit className="w-3.5 h-3.5" />
               </Button>
