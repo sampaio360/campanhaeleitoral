@@ -130,7 +130,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [data, loading]);
+  }, [data, loading, fullscreen]);
 
   if (loading) {
     return (
