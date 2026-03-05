@@ -112,8 +112,9 @@ Deno.serve(async (req) => {
         .insert({ user_id: userId, campanha_id });
     }
 
-    // Assign role
+    // Assign role (one role per user - replace any existing)
     if (role) {
+      await adminClient.from('user_roles').delete().eq('user_id', userId);
       await adminClient
         .from('user_roles')
         .insert({ user_id: userId, role });

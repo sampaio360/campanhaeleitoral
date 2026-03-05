@@ -81,8 +81,8 @@ export function AdminRoleAssignment() {
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { data: existing } = await supabase.from('user_roles').select('id').eq('user_id', userId).eq('role', role).single();
-      if (existing) throw new Error('Este usuário já possui essa função');
+      // Remove existing roles first (one role per user)
+      await supabase.from('user_roles').delete().eq('user_id', userId);
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) throw error;
     },

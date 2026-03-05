@@ -264,8 +264,12 @@ export function AdminUsers() {
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { data: existing } = await supabase.from('user_roles').select('id').eq('user_id', userId).eq('role', role).maybeSingle();
-      if (existing) throw new Error('Já possui esta função');
+      // Remove all existing roles for this user, then insert the new one (one role per user)
+      const { data: existing } = await supabase.from('user_roles').select('id').eq('user_id', userId);
+      if (existing && existing.length > 0) {
+        const { error: delErr } = await supabase.from('user_roles').delete().eq('user_id', userId);
+        if (delErr) throw delErr;
+      }
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) throw error;
     },
@@ -540,28 +544,28 @@ export function AdminUsers() {
                       ) : '—'}
                     </TableCell>
 
-                    {/* Funções */}
+                    {/* Função (única) */}
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1">
-                        {user.roles.map((r) => (
-                          <Badge key={r.id} variant={getRoleBadgeVariant(r.role)} className="gap-1 text-xs">
-                            {getRoleLabel(r.role)}
+                        {user.roles.length > 0 && (
+                          <Badge variant={getRoleBadgeVariant(user.roles[0].role)} className="gap-1 text-xs">
+                            {getRoleLabel(user.roles[0].role)}
                             <button
-                              onClick={() => { if (confirm(`Remover função "${getRoleLabel(r.role)}"?`)) removeRoleMutation.mutate(r.id); }}
+                              onClick={() => { if (confirm(`Remover função "${getRoleLabel(user.roles[0].role)}"?`)) removeRoleMutation.mutate(user.roles[0].id); }}
                               className="ml-0.5 hover:text-destructive-foreground"
                             >
                               <X className="w-3 h-3" />
                             </button>
                           </Badge>
-                        ))}
-                        <Popover open={addingRoleUserId === user.id} onOpenChange={(open) => { setAddingRoleUserId(open ? user.id : null); setNewRole("supporter"); }}>
+                        )}
+                        <Popover open={addingRoleUserId === user.id} onOpenChange={(open) => { setAddingRoleUserId(open ? user.id : null); setNewRole(user.roles[0]?.role || "supporter"); }}>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Adicionar função">
-                              <Plus className="w-3 h-3" />
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title={user.roles.length > 0 ? "Alterar função" : "Atribuir função"}>
+                              {user.roles.length > 0 ? <RefreshCw className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-56 p-3" align="start">
-                            <p className="text-xs font-medium mb-2">Adicionar função</p>
+                            <p className="text-xs font-medium mb-2">{user.roles.length > 0 ? "Alterar função" : "Atribuir função"}</p>
                             <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
                               <SelectTrigger className="w-full mb-2">
                                 <SelectValue />
