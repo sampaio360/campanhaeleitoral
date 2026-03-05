@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Search, Printer, Filter, X } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Search, Printer, Filter, X, Eye } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
@@ -19,6 +19,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProfileDataCard } from "@/components/profile/ProfileDataCard";
 
 interface Supporter {
   id: string;
@@ -47,6 +49,7 @@ const Supporters = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingSupporter, setEditingSupporter] = useState<SupporterEditData | null>(null);
   const [deletingSupporter, setDeletingSupporter] = useState<Supporter | null>(null);
+  const [viewingSupporter, setViewingSupporter] = useState<Supporter | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -418,9 +421,12 @@ const Supporters = () => {
                               {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
                             </Badge>
                           )}
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(supporter)}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingSupporter(supporter)} title="Ver perfil">
+                             <Eye className="w-3.5 h-3.5" />
+                           </Button>
+                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(supporter)}>
+                             <Pencil className="w-3.5 h-3.5" />
+                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeletingSupporter(supporter)}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
@@ -448,6 +454,15 @@ const Supporters = () => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!viewingSupporter} onOpenChange={(open) => { if (!open) setViewingSupporter(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{viewingSupporter?.nome}</DialogTitle>
+          </DialogHeader>
+          <ProfileDataCard supporter={viewingSupporter} userEmail={null} />
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deletingSupporter} onOpenChange={(open) => { if (!open) setDeletingSupporter(null); }}>
         <AlertDialogContent>
