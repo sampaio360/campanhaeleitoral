@@ -1,20 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Copy } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Search, Printer, Filter, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
 import { useQuery } from "@tanstack/react-query";
 import { SupporterForm, SupporterEditData } from "@/components/supporters/SupporterForm";
+import { generateSupportersReport } from "@/components/supporters/SupportersReportPDF";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Supporter {
   id: string;
@@ -43,6 +47,13 @@ const Supporters = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingSupporter, setEditingSupporter] = useState<SupporterEditData | null>(null);
   const [deletingSupporter, setDeletingSupporter] = useState<Supporter | null>(null);
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCidade, setFilterCidade] = useState("all");
+  const [filterBairro, setFilterBairro] = useState("all");
+  const [filterLideranca, setFilterLideranca] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   const BASE_URL = "https://www.gerencialcampanha.com.br";
 
@@ -73,6 +84,20 @@ const Supporters = () => {
         .eq("campanha_id", effectiveCampanhaId)
         .maybeSingle();
       return data?.enabled ?? false;
+    },
+    enabled: !!effectiveCampanhaId,
+  });
+
+  const { data: campanhaInfo } = useQuery({
+    queryKey: ["campanha-info-supporters", effectiveCampanhaId],
+    queryFn: async () => {
+      if (!effectiveCampanhaId) return null;
+      const { data } = await supabase
+        .from("campanhas")
+        .select("nome, partido")
+        .eq("id", effectiveCampanhaId)
+        .single();
+      return data as { nome: string; partido: string | null } | null;
     },
     enabled: !!effectiveCampanhaId,
   });
@@ -111,6 +136,48 @@ const Supporters = () => {
     }
   };
 
+  // Derived filter options
+  const cidadeOptions = useMemo(() => {
+    const set = new Set(supporters.map((s) => s.cidade).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [supporters]);
+
+  const bairroOptions = useMemo(() => {
+    let filtered = supporters;
+    if (filterCidade !== "all") filtered = filtered.filter((s) => s.cidade === filterCidade);
+    const set = new Set(filtered.map((s) => s.bairro).filter(Boolean) as string[]);
+    return Array.from(set).sort();
+  }, [supporters, filterCidade]);
+
+  // Filtered list
+  const filteredSupporters = useMemo(() => {
+    let list = supporters;
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.nome.toLowerCase().includes(q) ||
+          s.email?.toLowerCase().includes(q) ||
+          s.telefone?.includes(q) ||
+          s.cpf?.includes(q)
+      );
+    }
+    if (filterCidade !== "all") list = list.filter((s) => s.cidade === filterCidade);
+    if (filterBairro !== "all") list = list.filter((s) => s.bairro === filterBairro);
+    if (filterLideranca === "true") list = list.filter((s) => s.lideranca_politica);
+    if (filterLideranca === "false") list = list.filter((s) => !s.lideranca_politica);
+    return list;
+  }, [supporters, searchTerm, filterCidade, filterBairro, filterLideranca]);
+
+  const hasActiveFilters = filterCidade !== "all" || filterBairro !== "all" || filterLideranca !== "all" || searchTerm !== "";
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterCidade("all");
+    setFilterBairro("all");
+    setFilterLideranca("all");
+  };
+
   const handleEdit = (supporter: Supporter) => {
     setEditingSupporter(supporter);
     setShowForm(true);
@@ -141,6 +208,20 @@ const Supporters = () => {
     setEditingSupporter(null);
   };
 
+  const handleGenerateReport = () => {
+    generateSupportersReport({
+      supporters: filteredSupporters,
+      campanhaNome: campanhaInfo?.nome,
+      campanhaPartido: campanhaInfo?.partido || undefined,
+      filters: {
+        search: searchTerm || undefined,
+        cidade: filterCidade !== "all" ? filterCidade : undefined,
+        bairro: filterBairro !== "all" ? filterBairro : undefined,
+        lideranca: filterLideranca !== "all" ? filterLideranca : undefined,
+      },
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -166,15 +247,15 @@ const Supporters = () => {
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             {formEnabled && inviteToken && (
-              <Button
-                onClick={copyExternalLink}
-                variant="outline"
-                className="gap-2 w-full sm:w-auto"
-              >
+              <Button onClick={copyExternalLink} variant="outline" className="gap-2 w-full sm:w-auto">
                 <Link2 className="w-4 h-4" />
                 Copiar Link de Cadastro
               </Button>
             )}
+            <Button onClick={handleGenerateReport} variant="outline" className="gap-2 w-full sm:w-auto" disabled={filteredSupporters.length === 0}>
+              <Printer className="w-4 h-4" />
+              Relatório PDF
+            </Button>
             <Button
               onClick={() => { setEditingSupporter(null); setShowForm(!showForm); }}
               variant="campaign"
@@ -186,17 +267,104 @@ const Supporters = () => {
           </div>
         </div>
 
-        <Card className="mb-8">
-          <CardContent className="p-6">
+        {/* Stats + Search + Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <h3 className="text-2xl font-bold">{supporters.length}</h3>
-                <p className="text-muted-foreground">Total de pessoas cadastradas</p>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold">{filteredSupporters.length}</h3>
+                <p className="text-muted-foreground text-sm">
+                  {hasActiveFilters ? `de ${supporters.length} pessoas` : "Total de pessoas cadastradas"}
+                </p>
               </div>
             </div>
+
+            {/* Search bar */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, e-mail, telefone ou CPF..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Popover open={showFilters} onOpenChange={setShowFilters}>
+                <PopoverTrigger asChild>
+                  <Button variant={hasActiveFilters ? "default" : "outline"} size="icon" className="shrink-0">
+                    <Filter className="w-4 h-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 space-y-3" align="end">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Filtros</span>
+                    {hasActiveFilters && (
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs gap-1">
+                        <X className="w-3 h-3" /> Limpar
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Cidade</label>
+                    <Select value={filterCidade} onValueChange={(v) => { setFilterCidade(v); setFilterBairro("all"); }}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        {cidadeOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Bairro</label>
+                    <Select value={filterBairro} onValueChange={setFilterBairro}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {bairroOptions.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Liderança</label>
+                    <Select value={filterLideranca} onValueChange={setFilterLideranca}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="true">Apenas Lideranças</SelectItem>
+                        <SelectItem value="false">Sem Lideranças</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-1.5">
+                {filterCidade !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    Cidade: {filterCidade}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => { setFilterCidade("all"); setFilterBairro("all"); }} />
+                  </Badge>
+                )}
+                {filterBairro !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    Bairro: {filterBairro}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterBairro("all")} />
+                  </Badge>
+                )}
+                {filterLideranca !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    {filterLideranca === "true" ? "Lideranças" : "Sem lideranças"}
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterLideranca("all")} />
+                  </Badge>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -209,17 +377,25 @@ const Supporters = () => {
         )}
 
         <div className="grid gap-4">
-          {supporters.length === 0 ? (
+          {filteredSupporters.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhuma pessoa encontrada</h3>
-                <p className="text-muted-foreground mb-4">Comece cadastrando pessoas na campanha</p>
-                <Button onClick={() => setShowForm(true)} variant="campaign">Cadastrar Primeira Pessoa</Button>
+                <h3 className="text-lg font-semibold mb-2">
+                  {hasActiveFilters ? "Nenhuma pessoa encontrada com esses filtros" : "Nenhuma pessoa encontrada"}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {hasActiveFilters ? "Tente ajustar os filtros" : "Comece cadastrando pessoas na campanha"}
+                </p>
+                {hasActiveFilters ? (
+                  <Button onClick={clearFilters} variant="outline">Limpar Filtros</Button>
+                ) : (
+                  <Button onClick={() => setShowForm(true)} variant="campaign">Cadastrar Primeira Pessoa</Button>
+                )}
               </CardContent>
             </Card>
           ) : (
-            supporters.map((supporter) => (
+            filteredSupporters.map((supporter) => (
               <Card key={supporter.id}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3 sm:gap-4">
@@ -229,19 +405,19 @@ const Supporters = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h4 className="font-semibold text-sm sm:text-base truncate">{supporter.nome}</h4>
-                            {supporter.lideranca_politica && (
-                              <Badge variant="default" className="text-[10px] shrink-0 bg-amber-500 hover:bg-amber-600">Liderança</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {supporter.created_at && (
-                              <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-                                {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
-                              </Badge>
-                            )}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h4 className="font-semibold text-sm sm:text-base truncate">{supporter.nome}</h4>
+                          {supporter.lideranca_politica && (
+                            <Badge variant="default" className="text-[10px] shrink-0 bg-amber-500 hover:bg-amber-600">Liderança</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {supporter.created_at && (
+                            <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
+                              {new Date(supporter.created_at).toLocaleDateString('pt-BR')}
+                            </Badge>
+                          )}
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(supporter)}>
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
