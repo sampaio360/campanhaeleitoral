@@ -18,7 +18,7 @@ const Dashboard = () => {
   const activeCampanhaId = useActiveCampanhaId();
   const { isWidgetEnabled } = useDashboardWidgets(activeCampanhaId);
   const { canAccess } = useAccessControl();
-  const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(activeCampanhaId);
+  const { stats, supporterPoints, heatmapData, activeCheckins, loading, refetch } = useDashboardData(activeCampanhaId);
   const navigate = useNavigate();
 
   const recurrenceAlerts = useRecurrenceAlerts(activeCampanhaId);
@@ -132,7 +132,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {isWidgetEnabled("heatmap") && canAccess("/dashboard/heatmap") && (
                 <div className={isWidgetEnabled("simultaneity") && canAccess("/dashboard/simultaneidade") ? "lg:col-span-2" : "lg:col-span-3"}>
-                  <LeafletHeatmap data={supporterPoints} loading={false} />
+                  <LeafletHeatmap data={supporterPoints} loading={false} campanhaId={activeCampanhaId} onGeocoded={refetch} />
                 </div>
               )}
               {isWidgetEnabled("simultaneity") && canAccess("/dashboard/simultaneidade") && (
