@@ -112,19 +112,29 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
 
       const maxIntensity = Math.max(...heatPoints.map((p) => p[2]), 1);
 
-      L.heatLayer(heatPoints, {
-        radius: 30,
-        blur: 20,
-        maxZoom: 16,
-        max: maxIntensity,
-        gradient: {
-          0.2: "#2196F3",  // blue
-          0.4: "#4CAF50",  // green
-          0.6: "#FFEB3B",  // yellow
-          0.8: "#FF9800",  // orange
-          1.0: "#F44336",  // red
-        },
-      }).addTo(map);
+      // Delay heat layer until map canvas is fully sized to avoid IndexSizeError
+      const addHeatLayer = () => {
+        if (!mapInstanceRef.current) return;
+        try {
+          L.heatLayer(heatPoints, {
+            radius: 30,
+            blur: 20,
+            maxZoom: 16,
+            max: maxIntensity,
+            gradient: {
+              0.2: "#2196F3",
+              0.4: "#4CAF50",
+              0.6: "#FFEB3B",
+              0.8: "#FF9800",
+              1.0: "#F44336",
+            },
+          }).addTo(mapInstanceRef.current);
+        } catch {
+          // Canvas not ready, retry on next frame
+          requestAnimationFrame(addHeatLayer);
+        }
+      };
+      requestAnimationFrame(addHeatLayer);
 
       // Also add small circle markers with popups for interactivity
       locationMap.forEach((loc) => {
