@@ -39,8 +39,32 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
     (d) => d.latitude != null && d.longitude != null
   );
 
+  // Track container readiness
+  const [containerReady, setContainerReady] = useState(false);
+
   useEffect(() => {
-    if (!mapRef.current || loading) return;
+    const el = mapRef.current;
+    if (!el) return;
+    // If already has size, mark ready immediately
+    if (el.clientHeight > 0 && el.clientWidth > 0) {
+      setContainerReady(true);
+      return;
+    }
+    // Otherwise observe until it gains dimensions
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.height > 0 && entry.contentRect.width > 0) {
+          setContainerReady(true);
+          ro.disconnect();
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fullscreen, loading]);
+
+  useEffect(() => {
+    if (!mapRef.current || loading || !containerReady) return;
 
     // Clean up previous instance
     if (mapInstanceRef.current) {
@@ -53,9 +77,6 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
       validPoints.length > 0
         ? [validPoints[0].latitude!, validPoints[0].longitude!]
         : [-14.235, -51.9253];
-
-    // Ensure container has dimensions before creating map
-    if (mapRef.current.clientHeight === 0 || mapRef.current.clientWidth === 0) return;
 
     const map = L.map(mapRef.current).setView(center, validPoints.length > 0 ? 12 : 4);
     mapInstanceRef.current = map;
@@ -133,7 +154,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [data, loading, fullscreen]);
+  }, [data, loading, fullscreen, containerReady]);
 
   if (loading) {
     return (
