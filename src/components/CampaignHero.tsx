@@ -6,7 +6,7 @@ import {
   Shield, 
   BarChart3 
 } from "lucide-react";
-import heroImage from "@/assets/campaign-hero.jpg";
+import heroImage from "@/assets/campaign-hero.webp";
 
 export function CampaignHero() {
   return (
