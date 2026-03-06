@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "leaflet.heat";
 
 interface SupporterPoint {
   latitude: number | null;
@@ -19,8 +18,7 @@ interface LeafletHeatmapProps {
   loading: boolean;
 }
 
-/** Inner component that mounts a fresh Leaflet map each time its key changes */
-function HeatmapCanvas({ points, height }: { points: SupporterPoint[]; height: string }) {
+function PointsCanvas({ points, height }: { points: SupporterPoint[]; height: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -32,7 +30,6 @@ function HeatmapCanvas({ points, height }: { points: SupporterPoint[]; height: s
     const el = containerRef.current;
     if (!el) return;
 
-    // Wait until container has real dimensions
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
@@ -57,57 +54,52 @@ function HeatmapCanvas({ points, height }: { points: SupporterPoint[]; height: s
       }).addTo(map);
 
       if (validPoints.length > 0) {
-        const locationMap = new Map<string, { count: number; lat: number; lng: number; label: string }>();
+        // Group nearby points for count display
+        const locationMap = new Map<string, { count: number; lat: number; lng: number; label: string; names: string[] }>();
         validPoints.forEach((p) => {
           const key = `${p.latitude!.toFixed(4)},${p.longitude!.toFixed(4)}`;
           const existing = locationMap.get(key);
           if (existing) {
             existing.count++;
+            if (existing.names.length < 5) existing.names.push(p.nome);
           } else {
             locationMap.set(key, {
               count: 1,
               lat: p.latitude!,
               lng: p.longitude!,
               label: [p.bairro, p.cidade].filter(Boolean).join(", ") || p.nome,
+              names: [p.nome],
             });
           }
         });
 
-        const heatPoints: [number, number, number][] = [];
+        const maxCount = Math.max(...Array.from(locationMap.values()).map((l) => l.count), 1);
+
         locationMap.forEach((loc) => {
-          heatPoints.push([loc.lat, loc.lng, loc.count]);
-        });
+          const intensity = loc.count / maxCount;
+          const radius = Math.max(6, Math.min(18, 6 + intensity * 12));
+          const color =
+            intensity > 0.7 ? "hsl(0, 72%, 51%)" :
+            intensity > 0.4 ? "hsl(25, 95%, 53%)" :
+            intensity > 0.2 ? "hsl(48, 96%, 53%)" :
+            "hsl(217, 91%, 60%)";
 
-        const maxIntensity = Math.max(...heatPoints.map((p) => p[2]), 1);
+          const namesHtml = loc.names.map((n) => `• ${n}`).join("<br/>");
+          const extra = loc.count > 5 ? `<br/><em>+${loc.count - 5} mais</em>` : "";
 
-        // Add heat layer after map is fully ready
-        map.whenReady(() => {
-          if (cancelled) return;
-          L.heatLayer(heatPoints, {
-            radius: 30,
-            blur: 20,
-            maxZoom: 16,
-            max: maxIntensity,
-            gradient: {
-              0.2: "#2196F3",
-              0.4: "#4CAF50",
-              0.6: "#FFEB3B",
-              0.8: "#FF9800",
-              1.0: "#F44336",
-            },
-          }).addTo(map);
-        });
-
-        // Circle markers for interactivity
-        locationMap.forEach((loc) => {
           L.circleMarker([loc.lat, loc.lng], {
-            radius: 4,
-            fillColor: "transparent",
-            color: "transparent",
-            weight: 0,
-            fillOpacity: 0,
+            radius,
+            fillColor: color,
+            color: "hsl(0, 0%, 100%)",
+            weight: 2,
+            fillOpacity: 0.85,
           })
-            .bindPopup(`<strong>${loc.label}</strong><br/>${loc.count} apoiador${loc.count > 1 ? "es" : ""}`)
+            .bindPopup(
+              `<strong>${loc.label}</strong><br/>` +
+              `<span style="font-size:12px;color:#888">${loc.count} apoiador${loc.count > 1 ? "es" : ""}</span>` +
+              `<hr style="margin:4px 0;border-color:#eee"/>` +
+              `<span style="font-size:11px">${namesHtml}${extra}</span>`
+            )
             .addTo(map);
         });
 
@@ -130,7 +122,7 @@ function HeatmapCanvas({ points, height }: { points: SupporterPoint[]; height: s
         mapRef.current = null;
       }
     };
-  }, [validPoints.length]); // only re-init if data count changes
+  }, [validPoints.length]);
 
   return (
     <div
@@ -152,7 +144,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <MapPin className="w-5 h-5" /> Mapa de Calor
+            <MapPin className="w-5 h-5" /> Mapa de Apoiadores
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -172,7 +164,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
       }>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
           <CardTitle className="flex items-center gap-2 text-base">
-            <MapPin className="w-5 h-5" /> Mapa de Calor — Apoiadores
+            <MapPin className="w-5 h-5" /> Mapa de Apoiadores
           </CardTitle>
           <Button
             variant="ghost"
@@ -192,9 +184,8 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
               <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
             </div>
           ) : (
-            /* key={fullscreen} forces full remount with correct container dimensions */
             <div className={fullscreen ? "absolute inset-0" : ""}>
-              <HeatmapCanvas
+              <PointsCanvas
                 key={fullscreen ? "fs" : "normal"}
                 points={data}
                 height={fullscreen ? "h-full" : "h-80"}
