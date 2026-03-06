@@ -54,6 +54,9 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
         ? [validPoints[0].latitude!, validPoints[0].longitude!]
         : [-14.235, -51.9253];
 
+    // Ensure container has dimensions before creating map
+    if (mapRef.current.clientHeight === 0 || mapRef.current.clientWidth === 0) return;
+
     const map = L.map(mapRef.current).setView(center, validPoints.length > 0 ? 12 : 4);
     mapInstanceRef.current = map;
 
