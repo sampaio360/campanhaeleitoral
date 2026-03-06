@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,11 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Search, Printer, Filter, X, Eye } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Pencil, Trash2, Link2, Search, Printer, Filter, X, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Navbar } from "@/components/Navbar";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SupporterForm, SupporterEditData } from "@/components/supporters/SupporterForm";
 import { generateSupportersReport } from "@/components/supporters/SupportersReportPDF";
 import { generateSupporterFicha } from "@/components/supporters/SupporterFichaPDF";
@@ -41,12 +41,13 @@ interface Supporter {
   created_at: string | null;
 }
 
+const PAGE_SIZE = 50;
+
 const Supporters = () => {
   const { user } = useAuth();
   const effectiveCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
-  const [supporters, setSupporters] = useState<Supporter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingSupporter, setEditingSupporter] = useState<SupporterEditData | null>(null);
   const [deletingSupporter, setDeletingSupporter] = useState<Supporter | null>(null);
@@ -54,12 +55,91 @@ const Supporters = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCidade, setFilterCidade] = useState("all");
   const [filterBairro, setFilterBairro] = useState("all");
   const [filterLideranca, setFilterLideranca] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination
+  const [page, setPage] = useState(0);
+
   const BASE_URL = "https://www.gerencialcampanha.com.br";
+
+  // Debounce search
+  const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (searchTimer) clearTimeout(searchTimer);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(0);
+    }, 400);
+    setSearchTimer(timer);
+  };
+
+  // Filter options query (lightweight – only distinct cities/bairros)
+  const { data: filterOptions } = useQuery({
+    queryKey: ["supporters-filter-options", effectiveCampanhaId],
+    queryFn: async () => {
+      if (!effectiveCampanhaId) return { cidades: [] as string[], bairros: [] as string[] };
+      const { data } = await supabase
+        .from("supporters")
+        .select("cidade, bairro")
+        .eq("campanha_id", effectiveCampanhaId);
+      const cidades = new Set<string>();
+      const bairros = new Set<string>();
+      data?.forEach((s) => {
+        if (s.cidade) cidades.add(s.cidade);
+        if (s.bairro) bairros.add(s.bairro);
+      });
+      return {
+        cidades: Array.from(cidades).sort(),
+        bairros: Array.from(bairros).sort(),
+      };
+    },
+    enabled: !!effectiveCampanhaId,
+  });
+
+  const bairroOptions = useMemo(() => {
+    if (filterCidade === "all") return filterOptions?.bairros || [];
+    // We'd need to re-filter, but for simplicity use the full list
+    return filterOptions?.bairros || [];
+  }, [filterOptions, filterCidade]);
+
+  // Main paginated query
+  const { data: supportersData, isLoading: loading } = useQuery({
+    queryKey: ["supporters-paginated", effectiveCampanhaId, debouncedSearch, filterCidade, filterBairro, filterLideranca, page],
+    queryFn: async () => {
+      if (!effectiveCampanhaId) return { items: [] as Supporter[], count: 0 };
+
+      let query = supabase
+        .from("supporters")
+        .select("id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, lideranca_politica, observacao, foto_url, created_at", { count: "exact" })
+        .eq("campanha_id", effectiveCampanhaId)
+        .order("created_at", { ascending: false });
+
+      if (debouncedSearch) {
+        query = query.or(`nome.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,telefone.ilike.%${debouncedSearch}%,cpf.ilike.%${debouncedSearch}%`);
+      }
+      if (filterCidade !== "all") query = query.eq("cidade", filterCidade);
+      if (filterBairro !== "all") query = query.eq("bairro", filterBairro);
+      if (filterLideranca === "true") query = query.eq("lideranca_politica", true);
+      if (filterLideranca === "false") query = query.eq("lideranca_politica", false);
+
+      const from = page * PAGE_SIZE;
+      query = query.range(from, from + PAGE_SIZE - 1);
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { items: (data || []) as Supporter[], count: count || 0 };
+    },
+    enabled: !!effectiveCampanhaId && !!user,
+  });
+
+  const supporters = supportersData?.items || [];
+  const totalCount = supportersData?.count || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const { data: inviteToken } = useQuery({
     queryKey: ["invite-link-for-supporters", effectiveCampanhaId],
@@ -106,6 +186,8 @@ const Supporters = () => {
     enabled: !!effectiveCampanhaId,
   });
 
+  const hasActiveFilters = filterCidade !== "all" || filterBairro !== "all" || filterLideranca !== "all" || debouncedSearch !== "";
+
   const copyExternalLink = () => {
     if (!inviteToken) return;
     const url = `${BASE_URL}/cadastro/${inviteToken}`;
@@ -113,73 +195,13 @@ const Supporters = () => {
     toast({ title: "Link copiado!", description: url });
   };
 
-  useEffect(() => {
-    fetchSupporters();
-  }, [user, effectiveCampanhaId]);
-
-  const fetchSupporters = async () => {
-    if (!user || !effectiveCampanhaId) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const { data, error } = await supabase
-        .from('supporters')
-        .select('id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, lideranca_politica, observacao, foto_url, created_at')
-        .eq('campanha_id', effectiveCampanhaId)
-        .order('created_at', { ascending: false });
-      if (error) {
-        toast({ title: "Erro ao carregar apoiadores", description: error.message, variant: "destructive" });
-        return;
-      }
-      setSupporters(data || []);
-    } catch (error) {
-      console.error('Error fetching supporters:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Derived filter options
-  const cidadeOptions = useMemo(() => {
-    const set = new Set(supporters.map((s) => s.cidade).filter(Boolean) as string[]);
-    return Array.from(set).sort();
-  }, [supporters]);
-
-  const bairroOptions = useMemo(() => {
-    let filtered = supporters;
-    if (filterCidade !== "all") filtered = filtered.filter((s) => s.cidade === filterCidade);
-    const set = new Set(filtered.map((s) => s.bairro).filter(Boolean) as string[]);
-    return Array.from(set).sort();
-  }, [supporters, filterCidade]);
-
-  // Filtered list
-  const filteredSupporters = useMemo(() => {
-    let list = supporters;
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      list = list.filter(
-        (s) =>
-          s.nome.toLowerCase().includes(q) ||
-          s.email?.toLowerCase().includes(q) ||
-          s.telefone?.includes(q) ||
-          s.cpf?.includes(q)
-      );
-    }
-    if (filterCidade !== "all") list = list.filter((s) => s.cidade === filterCidade);
-    if (filterBairro !== "all") list = list.filter((s) => s.bairro === filterBairro);
-    if (filterLideranca === "true") list = list.filter((s) => s.lideranca_politica);
-    if (filterLideranca === "false") list = list.filter((s) => !s.lideranca_politica);
-    return list;
-  }, [supporters, searchTerm, filterCidade, filterBairro, filterLideranca]);
-
-  const hasActiveFilters = filterCidade !== "all" || filterBairro !== "all" || filterLideranca !== "all" || searchTerm !== "";
-
   const clearFilters = () => {
     setSearchTerm("");
+    setDebouncedSearch("");
     setFilterCidade("all");
     setFilterBairro("all");
     setFilterLideranca("all");
+    setPage(0);
   };
 
   const handleEdit = (supporter: Supporter) => {
@@ -193,7 +215,8 @@ const Supporters = () => {
       const { error } = await supabase.from('supporters').delete().eq('id', deletingSupporter.id);
       if (error) throw error;
       toast({ title: "Pessoa excluída com sucesso" });
-      fetchSupporters();
+      queryClient.invalidateQueries({ queryKey: ["supporters-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["supporters-filter-options"] });
     } catch (err: any) {
       toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
     } finally {
@@ -202,7 +225,8 @@ const Supporters = () => {
   };
 
   const handleFormSuccess = () => {
-    fetchSupporters();
+    queryClient.invalidateQueries({ queryKey: ["supporters-paginated"] });
+    queryClient.invalidateQueries({ queryKey: ["supporters-filter-options"] });
     setShowForm(false);
     setEditingSupporter(null);
   };
@@ -212,13 +236,30 @@ const Supporters = () => {
     setEditingSupporter(null);
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
+    // Fetch all filtered supporters for the report (no pagination)
+    let query = supabase
+      .from("supporters")
+      .select("id, nome, email, telefone, bairro, cidade, estado, endereco, cep, cpf, funcao_politica, lideranca_politica, observacao, foto_url, created_at")
+      .eq("campanha_id", effectiveCampanhaId!)
+      .order("created_at", { ascending: false });
+
+    if (debouncedSearch) {
+      query = query.or(`nome.ilike.%${debouncedSearch}%,email.ilike.%${debouncedSearch}%,telefone.ilike.%${debouncedSearch}%,cpf.ilike.%${debouncedSearch}%`);
+    }
+    if (filterCidade !== "all") query = query.eq("cidade", filterCidade);
+    if (filterBairro !== "all") query = query.eq("bairro", filterBairro);
+    if (filterLideranca === "true") query = query.eq("lideranca_politica", true);
+    if (filterLideranca === "false") query = query.eq("lideranca_politica", false);
+
+    const { data } = await query;
+
     generateSupportersReport({
-      supporters: filteredSupporters,
+      supporters: data || [],
       campanhaNome: campanhaInfo?.nome,
       campanhaPartido: campanhaInfo?.partido || undefined,
       filters: {
-        search: searchTerm || undefined,
+        search: debouncedSearch || undefined,
         cidade: filterCidade !== "all" ? filterCidade : undefined,
         bairro: filterBairro !== "all" ? filterBairro : undefined,
         lideranca: filterLideranca !== "all" ? filterLideranca : undefined,
@@ -256,7 +297,7 @@ const Supporters = () => {
                 Copiar Link de Cadastro
               </Button>
             )}
-            <Button onClick={handleGenerateReport} variant="outline" className="gap-2 w-full sm:w-auto" disabled={filteredSupporters.length === 0}>
+            <Button onClick={handleGenerateReport} variant="outline" className="gap-2 w-full sm:w-auto" disabled={totalCount === 0}>
               <Printer className="w-4 h-4" />
               Relatório PDF
             </Button>
@@ -279,9 +320,9 @@ const Supporters = () => {
                 <Users className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="text-2xl font-bold">{filteredSupporters.length}</h3>
+                <h3 className="text-2xl font-bold">{totalCount}</h3>
                 <p className="text-muted-foreground text-sm">
-                  {hasActiveFilters ? `de ${supporters.length} pessoas` : "Total de pessoas cadastradas"}
+                  {hasActiveFilters ? "pessoas encontradas" : "Total de pessoas cadastradas"}
                 </p>
               </div>
             </div>
@@ -293,7 +334,7 @@ const Supporters = () => {
                 <Input
                   placeholder="Buscar por nome, e-mail, telefone ou CPF..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-9"
                 />
               </div>
@@ -314,17 +355,17 @@ const Supporters = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Cidade</label>
-                    <Select value={filterCidade} onValueChange={(v) => { setFilterCidade(v); setFilterBairro("all"); }}>
+                    <Select value={filterCidade} onValueChange={(v) => { setFilterCidade(v); setFilterBairro("all"); setPage(0); }}>
                       <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todas</SelectItem>
-                        {cidadeOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {(filterOptions?.cidades || []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Bairro</label>
-                    <Select value={filterBairro} onValueChange={setFilterBairro}>
+                    <Select value={filterBairro} onValueChange={(v) => { setFilterBairro(v); setPage(0); }}>
                       <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
@@ -334,7 +375,7 @@ const Supporters = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-medium text-muted-foreground">Liderança</label>
-                    <Select value={filterLideranca} onValueChange={setFilterLideranca}>
+                    <Select value={filterLideranca} onValueChange={(v) => { setFilterLideranca(v); setPage(0); }}>
                       <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
@@ -352,19 +393,19 @@ const Supporters = () => {
                 {filterCidade !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     Cidade: {filterCidade}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => { setFilterCidade("all"); setFilterBairro("all"); }} />
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => { setFilterCidade("all"); setFilterBairro("all"); setPage(0); }} />
                   </Badge>
                 )}
                 {filterBairro !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     Bairro: {filterBairro}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterBairro("all")} />
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => { setFilterBairro("all"); setPage(0); }} />
                   </Badge>
                 )}
                 {filterLideranca !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     {filterLideranca === "true" ? "Lideranças" : "Sem lideranças"}
-                    <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterLideranca("all")} />
+                    <X className="w-3 h-3 cursor-pointer" onClick={() => { setFilterLideranca("all"); setPage(0); }} />
                   </Badge>
                 )}
               </div>
@@ -381,7 +422,7 @@ const Supporters = () => {
         )}
 
         <div className="grid gap-4">
-          {filteredSupporters.length === 0 ? (
+          {supporters.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -399,7 +440,7 @@ const Supporters = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredSupporters.map((supporter) => (
+            supporters.map((supporter) => (
               <Card key={supporter.id}>
                 <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3 sm:gap-4">
@@ -454,6 +495,37 @@ const Supporters = () => {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-sm text-muted-foreground">
+              Página {page + 1} de {totalPages} · {totalCount} pessoas
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+                className="gap-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+                className="gap-1"
+              >
+                Próxima
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!viewingSupporter} onOpenChange={(open) => { if (!open) setViewingSupporter(null); }}>
