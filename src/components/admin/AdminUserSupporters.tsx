@@ -60,6 +60,19 @@ export function AdminUserSupporters() {
 
   const linkMutation = useMutation({
     mutationFn: async ({ userId, supporterId }: { userId: string; supporterId: string | null }) => {
+      // Cross-validate: ensure supporter belongs to same campaign as user
+      if (supporterId) {
+        const user = users?.find(u => u.id === userId);
+        const { data: supporter } = await supabase
+          .from('supporters')
+          .select('campanha_id')
+          .eq('id', supporterId)
+          .single();
+        if (user?.campanha_id && supporter?.campanha_id && user.campanha_id !== supporter.campanha_id) {
+          throw new Error('A pessoa selecionada pertence a outra campanha. Selecione uma pessoa da mesma campanha do usuário.');
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ supporter_id: supporterId })

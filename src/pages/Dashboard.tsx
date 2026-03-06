@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Trophy } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { useDashboardData } from "@/components/dashboard/useDashboardData";
 import { useRecurrenceAlerts, useEffectivenessRanking } from "@/components/dashboard/useDashboardAlerts";
 import { Button } from "@/components/ui/button";
@@ -15,14 +15,14 @@ import { useDashboardWidgets } from "@/hooks/useDashboardWidgets";
 import { useAccessControl } from "@/hooks/useAccessControl";
 
 const Dashboard = () => {
-  const { selectedCampanhaId } = useAuth();
-  const { isWidgetEnabled } = useDashboardWidgets(selectedCampanhaId);
+  const activeCampanhaId = useActiveCampanhaId();
+  const { isWidgetEnabled } = useDashboardWidgets(activeCampanhaId);
   const { canAccess } = useAccessControl();
-  const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(selectedCampanhaId);
+  const { stats, supporterPoints, heatmapData, activeCheckins, loading } = useDashboardData(activeCampanhaId);
   const navigate = useNavigate();
 
-  const recurrenceAlerts = useRecurrenceAlerts(selectedCampanhaId);
-  const effectivenessRanking = useEffectivenessRanking(selectedCampanhaId);
+  const recurrenceAlerts = useRecurrenceAlerts(activeCampanhaId);
+  const effectivenessRanking = useEffectivenessRanking(activeCampanhaId);
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });

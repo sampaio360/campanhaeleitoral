@@ -81,10 +81,23 @@ export function AdminRoleAssignment() {
 
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      // Get old role for audit
+      const { data: oldRoles } = await supabase.from('user_roles').select('role').eq('user_id', userId);
+      const oldRole = oldRoles?.[0]?.role || null;
+
       // Remove existing roles first (one role per user)
       await supabase.from('user_roles').delete().eq('user_id', userId);
       const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
       if (error) throw error;
+
+      // Audit log
+      await supabase.from('audit_log').insert({
+        table_name: 'user_roles',
+        action: oldRole ? 'UPDATE' : 'INSERT',
+        record_id: userId,
+        old_data: oldRole ? { role: oldRole } : null,
+        new_data: { role },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] });
@@ -100,8 +113,22 @@ export function AdminRoleAssignment() {
 
   const removeRoleMutation = useMutation({
     mutationFn: async (roleId: string) => {
+      // Get role data for audit before deleting
+      const { data: roleData } = await supabase.from('user_roles').select('user_id, role').eq('id', roleId).single();
+
       const { error } = await supabase.from('user_roles').delete().eq('id', roleId);
       if (error) throw error;
+
+      // Audit log
+      if (roleData) {
+        await supabase.from('audit_log').insert({
+          table_name: 'user_roles',
+          action: 'DELETE',
+          record_id: roleData.user_id,
+          old_data: { role: roleData.role },
+          new_data: null,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-roles'] });
