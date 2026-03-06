@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Maximize2, Minimize2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { geocodeAddress } from "@/lib/geocode";
@@ -141,12 +142,24 @@ function PointsCanvas({ points, height }: { points: SupporterPoint[]; height: st
 export function LeafletHeatmap({ data, loading, campanhaId, onGeocoded }: LeafletHeatmapProps) {
   const [fullscreen, setFullscreen] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string>("all");
   const { toast } = useToast();
 
-  const validPoints = data.filter(
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((d) => { if (d.cidade) set.add(d.cidade); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [data]);
+
+  const filteredData = useMemo(() => {
+    if (selectedCity === "all") return data;
+    return data.filter((d) => d.cidade === selectedCity);
+  }, [data, selectedCity]);
+
+  const validPoints = filteredData.filter(
     (d) => d.latitude != null && d.longitude != null
   );
-  const missingCount = data.length - validPoints.length;
+  const missingCount = filteredData.length - validPoints.length;
 
   const handleBatchGeocode = async () => {
     if (!campanhaId) return;
@@ -219,16 +232,29 @@ export function LeafletHeatmap({ data, loading, campanhaId, onGeocoded }: Leafle
           ? "fixed inset-0 z-50 rounded-none flex flex-col m-0 border-0"
           : ""
       }>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0 flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-5 h-5" /> Mapa de Apoiadores
-            {data.length > 0 && (
+            {filteredData.length > 0 && (
               <Badge variant="secondary" className="text-xs font-normal">
-                {validPoints.length}/{data.length} no mapa
+                {validPoints.length}/{filteredData.length} no mapa
               </Badge>
             )}
           </CardTitle>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
+            {cities.length > 1 && (
+              <Select value={selectedCity} onValueChange={setSelectedCity}>
+                <SelectTrigger className="h-8 w-[160px] text-xs">
+                  <SelectValue placeholder="Todas as cidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as cidades</SelectItem>
+                  {cities.map((city) => (
+                    <SelectItem key={city} value={city}>{city}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {missingCount > 0 && campanhaId && (
               <Button
                 variant="outline"
@@ -271,8 +297,8 @@ export function LeafletHeatmap({ data, loading, campanhaId, onGeocoded }: Leafle
           ) : validPoints.length > 0 ? (
             <div className={fullscreen ? "absolute inset-0" : ""}>
               <PointsCanvas
-                key={fullscreen ? "fs" : "normal"}
-                points={data}
+                key={`${fullscreen ? "fs" : "normal"}-${selectedCity}`}
+                points={filteredData}
                 height={fullscreen ? "h-full" : "h-80"}
               />
             </div>
