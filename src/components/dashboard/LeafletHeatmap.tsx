@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Maximize2, Minimize2 } from "lucide-react";
+import { MapPin, Maximize2, Minimize2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { geocodeAddress } from "@/lib/geocode";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -16,6 +20,8 @@ interface SupporterPoint {
 interface LeafletHeatmapProps {
   data: SupporterPoint[];
   loading: boolean;
+  campanhaId?: string | null;
+  onGeocoded?: () => void;
 }
 
 function PointsCanvas({ points, height }: { points: SupporterPoint[]; height: string }) {
@@ -132,12 +138,63 @@ function PointsCanvas({ points, height }: { points: SupporterPoint[]; height: st
   );
 }
 
-export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
+export function LeafletHeatmap({ data, loading, campanhaId, onGeocoded }: LeafletHeatmapProps) {
   const [fullscreen, setFullscreen] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const { toast } = useToast();
 
   const validPoints = data.filter(
     (d) => d.latitude != null && d.longitude != null
   );
+  const missingCount = data.length - validPoints.length;
+
+  const handleBatchGeocode = async () => {
+    if (!campanhaId) return;
+    setGeocoding(true);
+    try {
+      const { data: supporters } = await supabase
+        .from("supporters")
+        .select("id, endereco, bairro, cidade, estado, cep")
+        .eq("campanha_id", campanhaId)
+        .is("latitude", null);
+
+      if (!supporters || supporters.length === 0) {
+        toast({ title: "Todos os apoiadores já possuem coordenadas." });
+        return;
+      }
+
+      let updated = 0;
+      for (const s of supporters) {
+        const result = await geocodeAddress({
+          endereco: s.endereco ?? undefined,
+          bairro: s.bairro ?? undefined,
+          cidade: s.cidade ?? undefined,
+          estado: s.estado ?? undefined,
+          cep: s.cep ?? undefined,
+        });
+        if (result) {
+          await supabase
+            .from("supporters")
+            .update({ latitude: result.lat, longitude: result.lng })
+            .eq("id", s.id);
+          updated++;
+        }
+      }
+
+      toast({
+        title: `${updated} de ${supporters.length} apoiadores geocodificados.`,
+        description: updated < supporters.length
+          ? `${supporters.length - updated} não puderam ser localizados (endereço insuficiente).`
+          : undefined,
+      });
+      onGeocoded?.();
+    } catch (err) {
+      console.error("Batch geocode error:", err);
+      toast({ title: "Erro ao geocodificar", variant: "destructive" });
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -165,25 +222,53 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
           <CardTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-5 h-5" /> Mapa de Apoiadores
+            {data.length > 0 && (
+              <Badge variant="secondary" className="text-xs font-normal">
+                {validPoints.length}/{data.length} no mapa
+              </Badge>
+            )}
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setFullscreen((f) => !f)}
-            title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
-          >
-            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            {missingCount > 0 && campanhaId && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                onClick={handleBatchGeocode}
+                disabled={geocoding}
+              >
+                <RefreshCw className={`w-3 h-3 ${geocoding ? "animate-spin" : ""}`} />
+                {geocoding ? "Localizando…" : `Localizar ${missingCount}`}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setFullscreen((f) => !f)}
+              title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            >
+              {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className={fullscreen ? "flex-1 p-0 min-h-0 relative" : ""}>
-          {validPoints.length === 0 ? (
+          {missingCount > 0 && (
+            <div className="flex items-center gap-2 mb-3 p-2 rounded-md bg-muted/50 text-xs text-muted-foreground">
+              <AlertTriangle className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+              <span>
+                {missingCount} apoiador{missingCount > 1 ? "es" : ""} sem coordenadas
+                {validPoints.length === 0 ? " — clique em \"Localizar\" para geocodificar." : "."}
+              </span>
+            </div>
+          )}
+          {validPoints.length === 0 && missingCount === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <MapPin className="w-10 h-10 mb-2 opacity-40" />
               <p className="text-sm">Nenhum apoiador com geolocalização cadastrado.</p>
               <p className="text-xs mt-1">Cadastre apoiadores com endereço para preencher o mapa automaticamente.</p>
             </div>
-          ) : (
+          ) : validPoints.length > 0 ? (
             <div className={fullscreen ? "absolute inset-0" : ""}>
               <PointsCanvas
                 key={fullscreen ? "fs" : "normal"}
@@ -191,7 +276,7 @@ export function LeafletHeatmap({ data, loading }: LeafletHeatmapProps) {
                 height={fullscreen ? "h-full" : "h-80"}
               />
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </>
