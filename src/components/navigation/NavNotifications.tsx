@@ -35,7 +35,7 @@ export function NavNotifications() {
   }, [fetchCount]);
 
   return (
-    <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/messages")}>
+    <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/mensagens")}>
       <Bell className="w-4 h-4" />
       {count > 0 && (
         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-destructive rounded-full text-[10px] text-destructive-foreground flex items-center justify-center px-1 animate-pulse">
