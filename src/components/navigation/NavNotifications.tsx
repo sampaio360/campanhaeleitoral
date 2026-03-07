@@ -15,20 +15,21 @@ export function NavNotifications() {
   const fetchCount = useCallback(async () => {
     if (!user || !activeCampanhaId) { setCount(0); return; }
 
-    const { count: total, error } = await supabase
-      .from("team_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("campanha_id", activeCampanhaId);
+    const { data, error } = await supabase.rpc("get_unread_message_count", {
+      _user_id: user.id,
+      _campanha_id: activeCampanhaId,
+    });
 
-    if (!error && total != null) setCount(total);
+    if (!error && data != null) setCount(data);
   }, [user, activeCampanhaId]);
 
   useEffect(() => {
     fetchCount();
 
     const channel = supabase
-      .channel("nav-messages")
+      .channel("nav-messages-unread")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "team_messages" }, () => fetchCount())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reads" }, () => fetchCount())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };

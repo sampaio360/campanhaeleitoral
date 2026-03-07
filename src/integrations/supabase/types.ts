@@ -551,6 +551,35 @@ export type Database = {
           },
         ]
       }
+      message_reads: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       municipio_eleicoes: {
         Row: {
           campanha_id: string
@@ -1848,6 +1877,10 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       get_email_by_pin: { Args: { p_pin: string }; Returns: string }
+      get_unread_message_count: {
+        Args: { _campanha_id: string; _user_id: string }
+        Returns: number
+      }
       get_user_available_candidates: {
         Args: { _user_id: string }
         Returns: {
