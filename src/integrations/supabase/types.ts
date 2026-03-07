@@ -1254,6 +1254,8 @@ export type Database = {
           id: string
           prioridade: string
           sender_id: string
+          target_cidade: string | null
+          target_roles: string[] | null
           titulo: string
         }
         Insert: {
@@ -1264,6 +1266,8 @@ export type Database = {
           id?: string
           prioridade?: string
           sender_id: string
+          target_cidade?: string | null
+          target_roles?: string[] | null
           titulo: string
         }
         Update: {
@@ -1274,6 +1278,8 @@ export type Database = {
           id?: string
           prioridade?: string
           sender_id?: string
+          target_cidade?: string | null
+          target_roles?: string[] | null
           titulo?: string
         }
         Relationships: [
