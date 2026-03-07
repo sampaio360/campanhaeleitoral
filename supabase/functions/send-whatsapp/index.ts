@@ -75,7 +75,13 @@ Deno.serve(async (req) => {
 
     const results: { nome: string; telefone: string; status: string; simulated: boolean }[] = [];
 
-    for (const s of recipients) {
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    for (let i = 0; i < recipients.length; i++) {
+      const s = recipients[i];
+
+      // Delay entre mensagens (3s) para evitar bloqueio - pula a primeira
+      if (i > 0) await delay(3000);
       const phone = s.telefone?.replace(/\D/g, "");
       if (!phone || phone.length < 10) {
         results.push({ nome: s.nome, telefone: s.telefone, status: "telefone_invalido", simulated: isSimulation });
