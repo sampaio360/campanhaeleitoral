@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye } from "lucide-react";
+import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, Phone } from "lucide-react";
 
 interface TeamMessage {
   id: string;
@@ -62,7 +62,9 @@ const Messages = () => {
     prioridade: "normal",
     target_cidade: "",
     target_roles: [] as string[],
+    notificar_whatsapp: false,
   });
+  const [whatsappResult, setWhatsappResult] = useState<any>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!activeCampanhaId) { setLoading(false); return; }
