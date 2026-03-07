@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -67,11 +67,11 @@ Deno.serve(async (req) => {
 
     const recipients = supporters || [];
 
-    // Check if real WhatsApp credentials are configured
-    const accessToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
-    const templateName = Deno.env.get("WHATSAPP_TEMPLATE_NAME") || "orientacao_campanha";
-    const isSimulation = !accessToken || !phoneNumberId;
+    // Check Mega-API credentials
+    const megaHost = Deno.env.get("MEGAAPI_HOST");
+    const megaInstanceKey = Deno.env.get("MEGAAPI_INSTANCE_KEY");
+    const megaToken = Deno.env.get("MEGAAPI_TOKEN");
+    const isSimulation = !megaHost || !megaInstanceKey || !megaToken;
 
     const results: { nome: string; telefone: string; status: string; simulated: boolean }[] = [];
 
@@ -85,45 +85,31 @@ Deno.serve(async (req) => {
       const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
 
       if (isSimulation) {
-        // Simulation mode - log but don't actually send
         console.log(`[SIMULAÇÃO] WhatsApp para ${s.nome} (${fullPhone}): ${titulo} - ${conteudo}`);
         results.push({ nome: s.nome, telefone: s.telefone, status: "simulado_ok", simulated: true });
       } else {
-        // Real Meta Cloud API call
         try {
-          const res = await fetch(
-            `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
+          const megaUrl = `https://${megaHost}/rest/sendMessage/${megaInstanceKey}/text`;
+          const res = await fetch(megaUrl, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${megaToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messageData: {
+                to: `${fullPhone}@s.whatsapp.net`,
+                text: `*${titulo}*\n\n${conteudo}`,
               },
-              body: JSON.stringify({
-                messaging_product: "whatsapp",
-                to: fullPhone,
-                type: "template",
-                template: {
-                  name: templateName,
-                  language: { code: "pt_BR" },
-                  components: [
-                    {
-                      type: "body",
-                      parameters: [
-                        { type: "text", text: `${titulo}: ${conteudo}`.substring(0, 1024) },
-                      ],
-                    },
-                  ],
-                },
-              }),
-            }
-          );
+            }),
+          });
 
           const result = await res.json();
           if (res.ok) {
+            console.log(`WhatsApp enviado para ${s.nome} (${fullPhone})`);
             results.push({ nome: s.nome, telefone: s.telefone, status: "enviado", simulated: false });
           } else {
-            console.error(`Erro WhatsApp para ${fullPhone}:`, result);
+            console.error(`Erro Mega-API para ${fullPhone}:`, result);
             results.push({ nome: s.nome, telefone: s.telefone, status: "erro", simulated: false });
           }
         } catch (err) {
