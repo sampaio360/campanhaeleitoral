@@ -40,7 +40,7 @@ export function Navbar() {
           )}
           {user ? (
             <>
-              <NavNotifications count={0} />
+              <NavNotifications />
               <NavUserMenu user={user} onSignOut={signOut} />
               <NavMobileMenu />
             </>
