@@ -1,0 +1,28 @@
+
+INSERT INTO streets (campanha_id, nome, bairro, cidade, estado, status_cobertura, latitude, longitude) VALUES
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Oceânica', 'Barra', 'Salvador', 'BA', 'concluida', -13.0050, -38.5320),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua da Paciência', 'Rio Vermelho', 'Salvador', 'BA', 'em_visitacao', -13.0120, -38.4890),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Jorge Amado', 'Boca do Rio', 'Salvador', 'BA', 'concluida', -12.9570, -38.3960),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua Silveira Martins', 'Cabula', 'Salvador', 'BA', 'em_visitacao', -12.9630, -38.4710),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Estrada do Coqueiro Grande', 'Cajazeiras', 'Salvador', 'BA', 'nao_visitada', -12.9180, -38.4250),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Senhor dos Passos', 'Centro', 'Feira de Santana', 'BA', 'concluida', -12.2669, -38.9666),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Presidente Dutra', 'SIM', 'Feira de Santana', 'BA', 'em_visitacao', -12.2420, -38.9340),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua Carlos Valadares', 'Tomba', 'Feira de Santana', 'BA', 'nao_visitada', -12.2580, -38.9520),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua Rui Barbosa', 'Centro', 'Itabuna', 'BA', 'concluida', -14.7856, -39.2800),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Aziz Maron', 'Conceição', 'Itabuna', 'BA', 'em_visitacao', -14.7780, -39.2730),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua José Petitinga', 'Centro', 'Juazeiro', 'BA', 'concluida', -9.4131, -40.5030),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Adolfo Viana', 'Country Club', 'Juazeiro', 'BA', 'nao_visitada', -9.4050, -40.5120),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua 2 de Julho', 'Centro', 'Jequié', 'BA', 'em_visitacao', -13.8582, -40.0836),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Clériston Andrade', 'Centro', 'Barreiras', 'BA', 'concluida', -12.1528, -44.9961),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Otávio Mangabeira', 'Centro', 'Alagoinhas', 'BA', 'em_visitacao', -12.1353, -38.4222),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Presidente Médici', 'Centro', 'Teixeira de Freitas', 'BA', 'concluida', -17.5351, -39.7437),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Apolônio Sales', 'Centro', 'Paulo Afonso', 'BA', 'em_visitacao', -9.4010, -38.2145),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Praça Padre Mateus', 'Centro', 'Santo Antônio de Jesus', 'BA', 'nao_visitada', -12.9685, -39.2612),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Santos Dumont', 'Centro', 'Guanambi', 'BA', 'concluida', -14.2236, -42.7809),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Getúlio Vargas', 'Centro', 'Eunápolis', 'BA', 'em_visitacao', -16.3779, -39.5804),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Elmo Serejo', 'Centro', 'Simões Filho', 'BA', 'nao_visitada', -12.7878, -38.4014),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Av. Barreiras', 'Centro', 'Luís Eduardo Magalhães', 'BA', 'concluida', -12.0959, -45.7880),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua Cel. Juvêncio', 'Centro', 'Brumado', 'BA', 'nao_visitada', -14.2037, -41.6653),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Praça da República', 'Centro', 'Valença', 'BA', 'concluida', -13.3702, -39.0727),
+('277894b4-d06c-4e96-a4a1-53f45d4f97a9', 'Rua Padre Cícero', 'São José', 'Irecê', 'BA', 'em_visitacao', -11.3080, -41.8500)
+ON CONFLICT ON CONSTRAINT streets_campanha_id_nome_bairro_cidade_key DO NOTHING;
