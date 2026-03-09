@@ -63,20 +63,20 @@ interface Lideranca {
 /* ───── Config ───── */
 
 const EVENT_TYPES: Record<string, { label: string; icon: typeof Megaphone; color: string }> = {
-  comicio: { label: "Comício", icon: Megaphone, color: "bg-red-500/10 text-red-700 border-red-200" },
-  reuniao: { label: "Reunião", icon: Users, color: "bg-blue-500/10 text-blue-700 border-blue-200" },
-  debate: { label: "Debate", icon: Mic, color: "bg-purple-500/10 text-purple-700 border-purple-200" },
-  carreata: { label: "Carreata", icon: Car, color: "bg-orange-500/10 text-orange-700 border-orange-200" },
-  corpo_a_corpo: { label: "Corpo a Corpo", icon: Handshake, color: "bg-teal-500/10 text-teal-700 border-teal-200" },
-  visita_institucional: { label: "Visita Institucional", icon: Building2, color: "bg-indigo-500/10 text-indigo-700 border-indigo-200" },
-  evento_partidario: { label: "Evento Partidário", icon: PartyPopper, color: "bg-pink-500/10 text-pink-700 border-pink-200" },
-  panfletagem: { label: "Panfletagem", icon: FileText, color: "bg-amber-500/10 text-amber-700 border-amber-200" },
-  inauguracao: { label: "Inauguração de Comitê", icon: Flag, color: "bg-green-500/10 text-green-700 border-green-200" },
-  entrevista: { label: "Entrevista / Mídia", icon: Tv, color: "bg-cyan-500/10 text-cyan-700 border-cyan-200" },
   cafe_com_liderancas: { label: "Café com Lideranças", icon: Coffee, color: "bg-yellow-500/10 text-yellow-800 border-yellow-200" },
-  evento_religioso: { label: "Evento Religioso", icon: Church, color: "bg-violet-500/10 text-violet-700 border-violet-200" },
-  evento_esportivo: { label: "Evento Esportivo", icon: Trophy, color: "bg-emerald-500/10 text-emerald-700 border-emerald-200" },
+  carreata: { label: "Carreata", icon: Car, color: "bg-orange-500/10 text-orange-700 border-orange-200" },
+  comicio: { label: "Comício", icon: Megaphone, color: "bg-red-500/10 text-red-700 border-red-200" },
+  corpo_a_corpo: { label: "Corpo a Corpo", icon: Handshake, color: "bg-teal-500/10 text-teal-700 border-teal-200" },
+  debate: { label: "Debate", icon: Mic, color: "bg-purple-500/10 text-purple-700 border-purple-200" },
+  entrevista: { label: "Entrevista / Mídia", icon: Tv, color: "bg-cyan-500/10 text-cyan-700 border-cyan-200" },
   evento_cultural: { label: "Evento Cultural", icon: Drama, color: "bg-rose-500/10 text-rose-700 border-rose-200" },
+  evento_esportivo: { label: "Evento Esportivo", icon: Trophy, color: "bg-emerald-500/10 text-emerald-700 border-emerald-200" },
+  evento_partidario: { label: "Evento Partidário", icon: PartyPopper, color: "bg-pink-500/10 text-pink-700 border-pink-200" },
+  evento_religioso: { label: "Evento Religioso", icon: Church, color: "bg-violet-500/10 text-violet-700 border-violet-200" },
+  inauguracao: { label: "Inauguração de Comitê", icon: Flag, color: "bg-green-500/10 text-green-700 border-green-200" },
+  panfletagem: { label: "Panfletagem", icon: FileText, color: "bg-amber-500/10 text-amber-700 border-amber-200" },
+  reuniao: { label: "Reunião", icon: Users, color: "bg-blue-500/10 text-blue-700 border-blue-200" },
+  visita_institucional: { label: "Visita Institucional", icon: Building2, color: "bg-indigo-500/10 text-indigo-700 border-indigo-200" },
   outro: { label: "Outro", icon: MoreHorizontal, color: "bg-muted text-muted-foreground border-border" },
 };
 
