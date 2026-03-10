@@ -142,6 +142,9 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
       cep: editData.cep ? maskCEP(editData.cep) : "",
       cpf: editData.cpf ? maskCPF(editData.cpf) : "",
       funcao_politica: editData.funcao_politica || "",
+      data_nascimento: editData.data_nascimento || "",
+      genero: editData.genero || "",
+      escolaridade: editData.escolaridade || "",
       observacao: editData.observacao || "",
     };
   };
