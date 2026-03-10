@@ -18,12 +18,19 @@ import { z } from "zod";
 import { Loader2, Search, User, MapPin } from "lucide-react";
 
 const FUNCOES_POLITICAS = [
-  "Prefeito(a)", "Vereador(a)", "Presidente de Bairro", "Líder Comunitário",
-  "Coordenador(a) de Campanha", "Cabo Eleitoral", "Assessor(a) Político",
-  "Militante", "Simpatizante", "Motorista", "Segurança", "Outros",
+  "Assessor(a) Político", "Cabo Eleitoral", "Coordenador(a) de Campanha",
+  "Ex Prefeito(a)", "Líder Comunitário", "Militante", "Motorista",
+  "Prefeito(a)", "Presidente de Bairro", "Presidente de Câmara",
+  "Segurança", "Simpatizante", "Vereador(a)", "Outros",
 ];
 
-const FUNCOES_LIDERANCA = ["Prefeito(a)", "Vereador(a)"];
+const FUNCOES_LIDERANCA = ["Prefeito(a)", "Vereador(a)", "Ex Prefeito(a)", "Presidente de Câmara"];
+
+const GENEROS = ["Masculino", "Feminino", "Outros"];
+
+const ESCOLARIDADES = [
+  "Nível Superior", "Nível Médio", "Nível Fundamental", "Não Alfabetizado",
+];
 
 function isLiderancaPolitica(funcao: string | undefined): boolean {
   return !!funcao && FUNCOES_LIDERANCA.includes(funcao);
@@ -76,6 +83,9 @@ const supporterSchema = z.object({
     { message: "CPF inválido" }
   ),
   funcao_politica: z.string().trim().max(100).optional().or(z.literal("")),
+  data_nascimento: z.string().trim().max(10).optional().or(z.literal("")),
+  genero: z.string().trim().max(20).optional().or(z.literal("")),
+  escolaridade: z.string().trim().max(50).optional().or(z.literal("")),
   observacao: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
@@ -95,6 +105,9 @@ export interface SupporterEditData {
   funcao_politica?: string | null;
   observacao?: string | null;
   foto_url?: string | null;
+  data_nascimento?: string | null;
+  genero?: string | null;
+  escolaridade?: string | null;
 }
 
 interface SupporterFormProps {
@@ -105,7 +118,8 @@ interface SupporterFormProps {
 
 const initialForm: SupporterFormData = {
   nome: "", telefone: "", email: "", rua: "", numero: "", bairro: "",
-  cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
+  cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "",
+  data_nascimento: "", genero: "", escolaridade: "", observacao: "",
 };
 
 export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormProps) {
@@ -128,6 +142,9 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
       cep: editData.cep ? maskCEP(editData.cep) : "",
       cpf: editData.cpf ? maskCPF(editData.cpf) : "",
       funcao_politica: editData.funcao_politica || "",
+      data_nascimento: editData.data_nascimento || "",
+      genero: editData.genero || "",
+      escolaridade: editData.escolaridade || "",
       observacao: editData.observacao || "",
     };
   };
@@ -262,6 +279,9 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
         cep: data.cep?.replace(/\D/g, "") || null, cpf: data.cpf?.replace(/\D/g, "") || null,
         foto_url: fotoUrl, funcao_politica: data.funcao_politica || null,
         lideranca_politica: isLiderancaPolitica(data.funcao_politica),
+        data_nascimento: data.data_nascimento || null,
+        genero: data.genero || null,
+        escolaridade: data.escolaridade || null,
         observacao: data.observacao || null,
         latitude: coords?.lat ?? null, longitude: coords?.lng ?? null,
       };
@@ -327,7 +347,7 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
               </div>
             </div>
 
-            {/* Função Política + CPF */}
+            {/* Função Política + Liderança + CPF */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="funcao_politica">Função Política</Label>
@@ -346,12 +366,38 @@ export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormPr
                   readOnly
                   className={`bg-muted ${isLiderancaPolitica(form.funcao_politica) ? "text-green-600 font-semibold" : ""}`}
                 />
-                <p className="text-xs text-muted-foreground">Preenchido automaticamente (Prefeito/Vereador)</p>
+                <p className="text-xs text-muted-foreground">Preenchido automaticamente</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
                 <Input id="cpf" value={form.cpf} onChange={(e) => handleMaskedChange("cpf", e.target.value, maskCPF)} placeholder="000.000.000-00" maxLength={14} />
                 {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+              </div>
+            </div>
+
+            {/* Data de Nascimento + Gênero + Escolaridade */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+                <Input id="data_nascimento" type="date" value={form.data_nascimento} onChange={(e) => handleChange("data_nascimento", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="genero">Gênero</Label>
+                <Select value={form.genero} onValueChange={(value) => handleChange("genero", value)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                  <SelectContent>
+                    {GENEROS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="escolaridade">Escolaridade</Label>
+                <Select value={form.escolaridade} onValueChange={(value) => handleChange("escolaridade", value)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a escolaridade" /></SelectTrigger>
+                  <SelectContent>
+                    {ESCOLARIDADES.map((e) => (<SelectItem key={e} value={e}>{e}</SelectItem>))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
