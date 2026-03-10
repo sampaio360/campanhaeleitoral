@@ -105,6 +105,9 @@ export interface SupporterEditData {
   funcao_politica?: string | null;
   observacao?: string | null;
   foto_url?: string | null;
+  data_nascimento?: string | null;
+  genero?: string | null;
+  escolaridade?: string | null;
 }
 
 interface SupporterFormProps {
