@@ -1205,11 +1205,14 @@ export type Database = {
           cidade: string | null
           cpf: string | null
           created_at: string | null
+          data_nascimento: string | null
           email: string | null
           endereco: string | null
+          escolaridade: string | null
           estado: string | null
           foto_url: string | null
           funcao_politica: string | null
+          genero: string | null
           geolocation: unknown
           id: string
           latitude: number | null
@@ -1227,11 +1230,14 @@ export type Database = {
           cidade?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          escolaridade?: string | null
           estado?: string | null
           foto_url?: string | null
           funcao_politica?: string | null
+          genero?: string | null
           geolocation?: unknown
           id?: string
           latitude?: number | null
@@ -1249,11 +1255,14 @@ export type Database = {
           cidade?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          escolaridade?: string | null
           estado?: string | null
           foto_url?: string | null
           funcao_politica?: string | null
+          genero?: string | null
           geolocation?: unknown
           id?: string
           latitude?: number | null
