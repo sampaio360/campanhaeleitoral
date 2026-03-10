@@ -118,7 +118,8 @@ interface SupporterFormProps {
 
 const initialForm: SupporterFormData = {
   nome: "", telefone: "", email: "", rua: "", numero: "", bairro: "",
-  cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "", observacao: "",
+  cidade: "", estado: "", cep: "", cpf: "", funcao_politica: "",
+  data_nascimento: "", genero: "", escolaridade: "", observacao: "",
 };
 
 export function SupporterForm({ onSuccess, onCancel, editData }: SupporterFormProps) {
