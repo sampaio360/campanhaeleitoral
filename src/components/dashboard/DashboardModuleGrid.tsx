@@ -6,6 +6,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
+const moduleColors: Record<string, { bg: string; icon: string }> = {
+  dashboard: { bg: "bg-blue-500/15", icon: "text-blue-600" },
+  financeiro: { bg: "bg-emerald-500/15", icon: "text-emerald-600" },
+  pessoas: { bg: "bg-violet-500/15", icon: "text-violet-600" },
+  municipios: { bg: "bg-sky-500/15", icon: "text-sky-600" },
+  checkin: { bg: "bg-cyan-500/15", icon: "text-cyan-600" },
+  resources: { bg: "bg-amber-500/15", icon: "text-amber-600" },
+  agenda: { bg: "bg-rose-500/15", icon: "text-rose-600" },
+  roteiro: { bg: "bg-teal-500/15", icon: "text-teal-600" },
+  mensagens: { bg: "bg-pink-500/15", icon: "text-pink-600" },
+  reports: { bg: "bg-orange-500/15", icon: "text-orange-600" },
+  historico: { bg: "bg-slate-500/15", icon: "text-slate-600" },
+  roi: { bg: "bg-cyan-500/15", icon: "text-cyan-600" },
+  admin: { bg: "bg-slate-500/15", icon: "text-slate-600" },
+};
+
 export function DashboardModuleGrid() {
   const { stats, loading } = useDashboardData();
   const { profile, isAdmin } = useAuth();
@@ -23,7 +39,6 @@ export function DashboardModuleGrid() {
       icon: BarChart3,
       route: "/dashboard",
       stat: "Visão executiva",
-      gradient: "from-indigo-500 to-blue-600",
     },
     {
       id: "financeiro",
@@ -31,7 +46,6 @@ export function DashboardModuleGrid() {
       icon: DollarSign,
       route: "/budget",
       stat: loading ? "..." : hasCandidate ? `${formatCurrency(stats.totalBudget)} | ${stats.expensesCount} despesas` : "Configurar",
-      gradient: "from-green-500 to-emerald-600",
     },
     {
       id: "pessoas",
@@ -39,7 +53,6 @@ export function DashboardModuleGrid() {
       icon: Users,
       route: "/supporters",
       stat: loading ? "..." : hasCandidate ? `${stats.supportersCount}` : "Configurar",
-      gradient: "from-purple-500 to-violet-600",
     },
     {
       id: "municipios",
@@ -47,7 +60,6 @@ export function DashboardModuleGrid() {
       icon: Building2,
       route: "/municipios",
       stat: "Gestão territorial",
-      gradient: "from-sky-500 to-blue-600",
     },
     {
       id: "checkin",
@@ -55,7 +67,6 @@ export function DashboardModuleGrid() {
       icon: MapPin,
       route: "/checkin",
       stat: "Ações de rua",
-      gradient: "from-blue-500 to-cyan-600",
     },
     {
       id: "resources",
@@ -63,7 +74,6 @@ export function DashboardModuleGrid() {
       icon: Package,
       route: "/resources",
       stat: "Solicitações",
-      gradient: "from-amber-500 to-orange-600",
     },
     {
       id: "agenda",
@@ -71,7 +81,6 @@ export function DashboardModuleGrid() {
       icon: CalendarDays,
       route: "/agenda",
       stat: "Compromissos",
-      gradient: "from-rose-500 to-pink-600",
     },
     {
       id: "roteiro",
@@ -79,7 +88,6 @@ export function DashboardModuleGrid() {
       icon: Route,
       route: "/roteiro",
       stat: "Planejamento",
-      gradient: "from-teal-500 to-cyan-600",
     },
     {
       id: "mensagens",
@@ -87,7 +95,6 @@ export function DashboardModuleGrid() {
       icon: MessageCircle,
       route: "/mensagens",
       stat: "Orientações",
-      gradient: "from-pink-500 to-rose-600",
     },
     {
       id: "reports",
@@ -95,7 +102,6 @@ export function DashboardModuleGrid() {
       icon: FileText,
       route: "/reports",
       stat: `${stats.reportsCount} disponíveis`,
-      gradient: "from-orange-500 to-red-500",
     },
     {
       id: "historico",
@@ -103,7 +109,6 @@ export function DashboardModuleGrid() {
       icon: History,
       route: "/historico",
       stat: "Atividades",
-      gradient: "from-slate-500 to-gray-600",
     },
   ];
 
@@ -115,7 +120,6 @@ export function DashboardModuleGrid() {
         icon: TrendingUp,
         route: "/roi",
         stat: "Custo por Voto",
-        gradient: "from-cyan-500 to-blue-600",
       },
       {
         id: "admin",
@@ -123,7 +127,6 @@ export function DashboardModuleGrid() {
         icon: Settings,
         route: "/admin",
         stat: "Gestão",
-        gradient: "from-slate-500 to-slate-700",
       }
     );
   }
@@ -134,6 +137,7 @@ export function DashboardModuleGrid() {
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
       {filteredModules.map((mod) => {
         const Icon = mod.icon;
+        const colors = moduleColors[mod.id];
         return (
           <Card
             key={mod.id}
@@ -144,8 +148,8 @@ export function DashboardModuleGrid() {
             )}
           >
             <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-primary/10">
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center", colors.bg)}>
+                <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", colors.icon)} />
               </div>
               <span className="font-semibold text-xs sm:text-sm">{mod.title}</span>
               <span className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">{mod.stat}</span>
