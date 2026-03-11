@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate role is a known value
-    const VALID_ROLES = ['supporter', 'political_leader', 'local_coordinator', 'supervisor', 'assessor', 'coordinator', 'candidate', 'admin', 'master'];
+    const VALID_ROLES = ['supporter', 'political_leader', 'local_coordinator', 'territorial_coordinator', 'supervisor', 'assessor', 'coordinator', 'candidate', 'admin', 'master'];
     if (role && !VALID_ROLES.includes(role)) {
       return new Response(JSON.stringify({ error: 'Invalid role' }), { status: 400, headers: corsHeaders });
     }

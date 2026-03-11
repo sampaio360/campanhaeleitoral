@@ -53,7 +53,9 @@ export function useAccessControl() {
   const DEFAULT_DENIED: Record<string, string[]> = {
     supporter: ['/budget', '/expenses', '/admin', '/roi'],
     political_leader: ['/admin', '/roi'],
+    territorial_coordinator: ['/admin', '/roi'],
     local_coordinator: ['/admin', '/roi'],
+    supervisor: ['/admin', '/roi'],
     assessor: ['/admin'],
   };
 

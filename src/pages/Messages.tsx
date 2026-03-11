@@ -38,13 +38,14 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   coordinator: "Coordenador Geral",
   assessor: "Assessor",
-  supervisor: "Supervisor",
+  territorial_coordinator: "Coordenador Territorial",
+  supervisor: "Supervisor de Área",
   local_coordinator: "Coordenador Local",
   political_leader: "Liderança Política",
   supporter: "Apoiador",
 };
 
-const SELECTABLE_ROLES = ["admin", "coordinator", "assessor", "supervisor", "local_coordinator", "political_leader", "supporter"];
+const SELECTABLE_ROLES = ["admin", "coordinator", "assessor", "territorial_coordinator", "supervisor", "local_coordinator", "political_leader", "supporter"];
 
 const Messages = () => {
   const { user, isCoordinator } = useAuth();

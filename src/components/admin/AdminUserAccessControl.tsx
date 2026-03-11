@@ -36,7 +36,9 @@ interface AccessControlRow {
 const DEFAULT_DENIED: Record<string, string[]> = {
   supporter: ['/budget', '/expenses', '/settings', '/admin', '/roi'],
   political_leader: ['/settings', '/admin', '/roi'],
+  territorial_coordinator: ['/admin', '/roi'],
   local_coordinator: ['/admin', '/roi'],
+  supervisor: ['/admin', '/roi'],
   assessor: ['/admin'],
 };
 
