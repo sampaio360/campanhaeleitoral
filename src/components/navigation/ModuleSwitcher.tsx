@@ -51,11 +51,11 @@ export function ModuleSwitcher() {
             key={mod.id}
             onClick={() => navigate(mod.route)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
-              "border hover:shadow-sm",
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
+              "border border-border/50 hover:shadow-sm",
               active
                 ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-accent"
+                : "bg-card text-muted-foreground hover:text-foreground hover:bg-secondary"
             )}
           >
             <Icon className="w-4 h-4" />

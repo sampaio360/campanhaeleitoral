@@ -72,11 +72,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
-			borderRadius: {
-				lg: '0.875rem',
-				md: '0.625rem',
-				sm: '0.5rem'
-			},
+		borderRadius: {
+			xl: '1.25rem',
+			lg: '1rem',
+			md: '0.75rem',
+			sm: '0.5rem'
+		},
 			keyframes: {
 				'accordion-down': {
 					from: { height: '0' },

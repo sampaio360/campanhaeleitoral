@@ -25,7 +25,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <nav className="border-b border-border/50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/70 sticky top-0 z-50">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
         <div className="flex items-center gap-6">
           <NavLogo />
