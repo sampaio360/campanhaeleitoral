@@ -6,20 +6,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
-const moduleColors: Record<string, { bg: string; icon: string }> = {
-  dashboard: { bg: "bg-blue-500/15", icon: "text-blue-600" },
-  financeiro: { bg: "bg-emerald-500/15", icon: "text-emerald-600" },
-  pessoas: { bg: "bg-violet-500/15", icon: "text-violet-600" },
-  municipios: { bg: "bg-sky-500/15", icon: "text-sky-600" },
-  checkin: { bg: "bg-cyan-500/15", icon: "text-cyan-600" },
-  resources: { bg: "bg-amber-500/15", icon: "text-amber-600" },
-  agenda: { bg: "bg-rose-500/15", icon: "text-rose-600" },
-  roteiro: { bg: "bg-teal-500/15", icon: "text-teal-600" },
-  mensagens: { bg: "bg-pink-500/15", icon: "text-pink-600" },
-  reports: { bg: "bg-orange-500/15", icon: "text-orange-600" },
-  historico: { bg: "bg-slate-500/15", icon: "text-slate-600" },
-  roi: { bg: "bg-cyan-500/15", icon: "text-cyan-600" },
-  admin: { bg: "bg-slate-500/15", icon: "text-slate-600" },
+const moduleColors: Record<string, { bg: string; icon: string; hoverBg: string }> = {
+  dashboard: { bg: "bg-blue-50", icon: "text-blue-600", hoverBg: "hover:bg-blue-100" },
+  financeiro: { bg: "bg-emerald-50", icon: "text-emerald-600", hoverBg: "hover:bg-emerald-100" },
+  pessoas: { bg: "bg-violet-50", icon: "text-violet-600", hoverBg: "hover:bg-violet-100" },
+  municipios: { bg: "bg-sky-50", icon: "text-sky-600", hoverBg: "hover:bg-sky-100" },
+  checkin: { bg: "bg-cyan-50", icon: "text-cyan-600", hoverBg: "hover:bg-cyan-100" },
+  resources: { bg: "bg-amber-50", icon: "text-amber-600", hoverBg: "hover:bg-amber-100" },
+  agenda: { bg: "bg-rose-50", icon: "text-rose-600", hoverBg: "hover:bg-rose-100" },
+  roteiro: { bg: "bg-teal-50", icon: "text-teal-600", hoverBg: "hover:bg-teal-100" },
+  mensagens: { bg: "bg-pink-50", icon: "text-pink-600", hoverBg: "hover:bg-pink-100" },
+  reports: { bg: "bg-orange-50", icon: "text-orange-600", hoverBg: "hover:bg-orange-100" },
+  historico: { bg: "bg-slate-50", icon: "text-slate-600", hoverBg: "hover:bg-slate-100" },
+  roi: { bg: "bg-cyan-50", icon: "text-cyan-600", hoverBg: "hover:bg-cyan-100" },
+  admin: { bg: "bg-slate-50", icon: "text-slate-600", hoverBg: "hover:bg-slate-100" },
 };
 
 export function DashboardModuleGrid() {
@@ -143,12 +143,13 @@ export function DashboardModuleGrid() {
             key={mod.id}
             onClick={() => navigate(mod.route)}
             className={cn(
-              "cursor-pointer transition-all hover:shadow-lg active:scale-[0.98] hover:scale-[1.02]",
-              "border border-border/50 hover:border-primary/30"
+              "cursor-pointer transition-all hover:shadow-lg active:scale-[0.98] hover:scale-[1.02] border-0",
+              colors.bg,
+              colors.hoverBg
             )}
           >
             <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
-              <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center", colors.bg)}>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-white/80 shadow-sm">
                 <Icon className={cn("w-4 h-4 sm:w-5 sm:h-5", colors.icon)} />
               </div>
               <span className="font-semibold text-xs sm:text-sm">{mod.title}</span>
