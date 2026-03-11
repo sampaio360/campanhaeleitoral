@@ -1,40 +1,33 @@
 import { useNavigate } from "react-router-dom";
 import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Route, MessageCircle, TrendingUp, History, Building2, CalendarDays } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useDashboardData } from "./useDashboardData";
+import { useModuleStats } from "./useModuleStats";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
 // Cores coordenadas por grupo lógico
 const moduleColors: Record<string, { bg: string; icon: string; hoverBg: string }> = {
-  // Visão Geral — índigo
   dashboard:  { bg: "bg-indigo-100", icon: "text-indigo-700", hoverBg: "hover:bg-indigo-200" },
-  // Campo & Pessoas — tons de violeta/púrpura
   pessoas:    { bg: "bg-violet-100", icon: "text-violet-700", hoverBg: "hover:bg-violet-200" },
   municipios: { bg: "bg-purple-100", icon: "text-purple-700", hoverBg: "hover:bg-purple-200" },
   checkin:    { bg: "bg-fuchsia-100", icon: "text-fuchsia-700", hoverBg: "hover:bg-fuchsia-200" },
   roteiro:    { bg: "bg-violet-100", icon: "text-violet-700", hoverBg: "hover:bg-violet-200" },
-  // Financeiro — tons de verde
   financeiro: { bg: "bg-emerald-100", icon: "text-emerald-700", hoverBg: "hover:bg-emerald-200" },
   roi:        { bg: "bg-green-100", icon: "text-green-700", hoverBg: "hover:bg-green-200" },
-  // Operacional — tons quentes (âmbar/laranja)
   agenda:     { bg: "bg-amber-100", icon: "text-amber-700", hoverBg: "hover:bg-amber-200" },
   resources:  { bg: "bg-orange-100", icon: "text-orange-700", hoverBg: "hover:bg-orange-200" },
   mensagens:  { bg: "bg-yellow-100", icon: "text-yellow-700", hoverBg: "hover:bg-yellow-200" },
-  // Relatórios & Histórico — tons de azul/sky
   reports:    { bg: "bg-sky-100", icon: "text-sky-700", hoverBg: "hover:bg-sky-200" },
   historico:  { bg: "bg-blue-100", icon: "text-blue-700", hoverBg: "hover:bg-blue-200" },
-  // Administração — neutro
   admin:      { bg: "bg-slate-200", icon: "text-slate-700", hoverBg: "hover:bg-slate-300" },
 };
 
 export function DashboardModuleGrid() {
-  const { stats, loading } = useDashboardData();
-  const { profile, isAdmin } = useAuth();
+  const { stats, loading, hasCandidate } = useModuleStats();
+  const { isAdmin } = useAuth();
   const { canAccess } = useAccessControl();
   const navigate = useNavigate();
-  const hasCandidate = !!profile?.candidate_id;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
