@@ -50,43 +50,52 @@ function RoutesFallback() {
   );
 }
 
+function AppContent() {
+  useCampaignTheme();
+  return (
+    <>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Suspense fallback={<RoutesFallback />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/select-candidate" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dossie/:cidade" element={<ProtectedRoute><DossieVisita /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+            <Route path="/supporters" element={<ProtectedRoute><Supporters /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/checkin" element={<ProtectedRoute><StreetCheckin /></ProtectedRoute>} />
+            <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+            <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+            <Route path="/roteiro" element={<ProtectedRoute><RouteAssignment /></ProtectedRoute>} />
+            <Route path="/mensagens" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/roi" element={<ProtectedRoute><ROI /></ProtectedRoute>} />
+            <Route path="/modulos" element={<ProtectedRoute><Modulos /></ProtectedRoute>} />
+            <Route path="/municipios" element={<ProtectedRoute><Municipios /></ProtectedRoute>} />
+            <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
+            <Route path="/convite/:token" element={<Invite />} />
+            <Route path="/cadastro/:token" element={<ExternalRegister />} />
+            <Route path="/coleta/:token" element={<ExternalDataCollection />} />
+            <Route path="/install" element={<Install />} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<RoutesFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/select-candidate" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dossie/:cidade" element={<ProtectedRoute><DossieVisita /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
-              <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
-              <Route path="/supporters" element={<ProtectedRoute><Supporters /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/checkin" element={<ProtectedRoute><StreetCheckin /></ProtectedRoute>} />
-              <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
-              <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
-              <Route path="/roteiro" element={<ProtectedRoute><RouteAssignment /></ProtectedRoute>} />
-              <Route path="/mensagens" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-              <Route path="/roi" element={<ProtectedRoute><ROI /></ProtectedRoute>} />
-              <Route path="/modulos" element={<ProtectedRoute><Modulos /></ProtectedRoute>} />
-              <Route path="/municipios" element={<ProtectedRoute><Municipios /></ProtectedRoute>} />
-              <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
-              <Route path="/convite/:token" element={<Invite />} />
-              <Route path="/cadastro/:token" element={<ExternalRegister />} />
-              <Route path="/coleta/:token" element={<ExternalDataCollection />} />
-              <Route path="/install" element={<Install />} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        <AppContent />
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
