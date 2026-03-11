@@ -7,19 +7,19 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { cn } from "@/lib/utils";
 
 const moduleColors: Record<string, { bg: string; icon: string; hoverBg: string }> = {
-  dashboard: { bg: "bg-blue-50", icon: "text-blue-600", hoverBg: "hover:bg-blue-100" },
-  financeiro: { bg: "bg-emerald-50", icon: "text-emerald-600", hoverBg: "hover:bg-emerald-100" },
-  pessoas: { bg: "bg-violet-50", icon: "text-violet-600", hoverBg: "hover:bg-violet-100" },
-  municipios: { bg: "bg-sky-50", icon: "text-sky-600", hoverBg: "hover:bg-sky-100" },
-  checkin: { bg: "bg-cyan-50", icon: "text-cyan-600", hoverBg: "hover:bg-cyan-100" },
-  resources: { bg: "bg-amber-50", icon: "text-amber-600", hoverBg: "hover:bg-amber-100" },
-  agenda: { bg: "bg-rose-50", icon: "text-rose-600", hoverBg: "hover:bg-rose-100" },
-  roteiro: { bg: "bg-teal-50", icon: "text-teal-600", hoverBg: "hover:bg-teal-100" },
-  mensagens: { bg: "bg-pink-50", icon: "text-pink-600", hoverBg: "hover:bg-pink-100" },
-  reports: { bg: "bg-orange-50", icon: "text-orange-600", hoverBg: "hover:bg-orange-100" },
-  historico: { bg: "bg-slate-50", icon: "text-slate-600", hoverBg: "hover:bg-slate-100" },
-  roi: { bg: "bg-cyan-50", icon: "text-cyan-600", hoverBg: "hover:bg-cyan-100" },
-  admin: { bg: "bg-slate-50", icon: "text-slate-600", hoverBg: "hover:bg-slate-100" },
+  dashboard: { bg: "bg-blue-100", icon: "text-blue-700", hoverBg: "hover:bg-blue-200" },
+  financeiro: { bg: "bg-emerald-100", icon: "text-emerald-700", hoverBg: "hover:bg-emerald-200" },
+  pessoas: { bg: "bg-violet-100", icon: "text-violet-700", hoverBg: "hover:bg-violet-200" },
+  municipios: { bg: "bg-sky-100", icon: "text-sky-700", hoverBg: "hover:bg-sky-200" },
+  checkin: { bg: "bg-cyan-100", icon: "text-cyan-700", hoverBg: "hover:bg-cyan-200" },
+  resources: { bg: "bg-amber-100", icon: "text-amber-700", hoverBg: "hover:bg-amber-200" },
+  agenda: { bg: "bg-rose-100", icon: "text-rose-700", hoverBg: "hover:bg-rose-200" },
+  roteiro: { bg: "bg-teal-100", icon: "text-teal-700", hoverBg: "hover:bg-teal-200" },
+  mensagens: { bg: "bg-fuchsia-100", icon: "text-fuchsia-700", hoverBg: "hover:bg-fuchsia-200" },
+  reports: { bg: "bg-orange-100", icon: "text-orange-700", hoverBg: "hover:bg-orange-200" },
+  historico: { bg: "bg-gray-200", icon: "text-gray-700", hoverBg: "hover:bg-gray-300" },
+  roi: { bg: "bg-indigo-100", icon: "text-indigo-700", hoverBg: "hover:bg-indigo-200" },
+  admin: { bg: "bg-slate-200", icon: "text-slate-700", hoverBg: "hover:bg-slate-300" },
 };
 
 export function DashboardModuleGrid() {
