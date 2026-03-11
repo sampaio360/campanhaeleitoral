@@ -143,7 +143,7 @@ export function AdminRoleAssignment() {
     switch (role) {
       case 'master': case 'admin': return 'destructive';
       case 'candidate': case 'coordinator': case 'assessor': return 'default';
-      case 'local_coordinator': case 'political_leader': return 'outline';
+      case 'territorial_coordinator': case 'local_coordinator': case 'political_leader': return 'outline';
       default: return 'secondary';
     }
   };
@@ -155,6 +155,7 @@ export function AdminRoleAssignment() {
       case 'candidate': return 'Candidato';
       case 'assessor': return 'Assessor';
       case 'coordinator': return 'Coordenador Geral';
+      case 'territorial_coordinator': return 'Coordenador Territorial';
       case 'local_coordinator': return 'Coordenador Local';
       case 'political_leader': return 'Liderança Política';
       case 'supervisor': return 'Supervisor de Área';
@@ -212,10 +213,11 @@ export function AdminRoleAssignment() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="supporter">Apoiador</SelectItem>
-                    <SelectItem value="political_leader">Liderança Política</SelectItem>
-                    <SelectItem value="local_coordinator">Coordenador Local</SelectItem>
-                    <SelectItem value="assessor">Assessor</SelectItem>
                     <SelectItem value="supervisor">Supervisor de Área</SelectItem>
+                    <SelectItem value="local_coordinator">Coordenador Local</SelectItem>
+                    <SelectItem value="territorial_coordinator">Coordenador Territorial</SelectItem>
+                    <SelectItem value="political_leader">Liderança Política</SelectItem>
+                    <SelectItem value="assessor">Assessor</SelectItem>
                     <SelectItem value="coordinator">Coordenador Geral</SelectItem>
                     <SelectItem value="candidate">Candidato</SelectItem>
                     {isMaster && <SelectItem value="admin">Administrador de Sistema</SelectItem>}

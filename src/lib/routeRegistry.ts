@@ -42,10 +42,11 @@ export const ROUTE_REGISTRY: RouteEntry[] = [
 
 export const ALL_ROLES: AppRole[] = [
   'supporter',
-  'political_leader',
-  'local_coordinator',
-  'assessor',
   'supervisor',
+  'local_coordinator',
+  'territorial_coordinator',
+  'political_leader',
+  'assessor',
   'coordinator',
   'candidate',
   'admin',
@@ -54,9 +55,10 @@ export const ALL_ROLES: AppRole[] = [
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   supporter: 'Apoiador',
-  political_leader: 'Liderança Política',
+  supervisor: 'Supervisor de Área',
   local_coordinator: 'Coordenador Local',
-  supervisor: 'Supervisor',
+  territorial_coordinator: 'Coordenador Territorial',
+  political_leader: 'Liderança Política',
   assessor: 'Assessor',
   coordinator: 'Coordenador Geral',
   candidate: 'Candidato',

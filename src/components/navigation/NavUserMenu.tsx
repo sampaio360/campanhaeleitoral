@@ -23,9 +23,12 @@ import { supabase } from "@/integrations/supabase/client";
 const ROLE_LABELS: Record<string, { label: string; icon: typeof Crown }> = {
   master: { label: "Desenvolvedor", icon: Crown },
   admin: { label: "Administrador", icon: Shield },
-  coordinator: { label: "Coordenador", icon: UserCheck },
+  coordinator: { label: "Coordenador Geral", icon: UserCheck },
   assessor: { label: "Assessor", icon: UserCheck },
-  supervisor: { label: "Supervisor", icon: UserCheck },
+  territorial_coordinator: { label: "Coordenador Territorial", icon: UserCheck },
+  supervisor: { label: "Supervisor de Área", icon: UserCheck },
+  local_coordinator: { label: "Coordenador Local", icon: UserCheck },
+  political_leader: { label: "Liderança Política", icon: UserCheck },
   candidate: { label: "Candidato", icon: User },
   supporter: { label: "Apoiador", icon: User },
 };
