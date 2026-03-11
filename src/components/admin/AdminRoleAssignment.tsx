@@ -143,7 +143,7 @@ export function AdminRoleAssignment() {
     switch (role) {
       case 'master': case 'admin': return 'destructive';
       case 'candidate': case 'coordinator': case 'assessor': return 'default';
-      case 'local_coordinator': case 'political_leader': return 'outline';
+      case 'territorial_coordinator': case 'local_coordinator': case 'political_leader': return 'outline';
       default: return 'secondary';
     }
   };
@@ -155,6 +155,7 @@ export function AdminRoleAssignment() {
       case 'candidate': return 'Candidato';
       case 'assessor': return 'Assessor';
       case 'coordinator': return 'Coordenador Geral';
+      case 'territorial_coordinator': return 'Coordenador Territorial';
       case 'local_coordinator': return 'Coordenador Local';
       case 'political_leader': return 'Liderança Política';
       case 'supervisor': return 'Supervisor de Área';
