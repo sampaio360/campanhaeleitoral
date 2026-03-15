@@ -236,6 +236,13 @@ const Messages = () => {
         );
       });
     }
+    if (msg.target_user_ids && msg.target_user_ids.length > 0) {
+      badges.push(
+        <Badge key="users" variant="secondary" className="text-xs">
+          <User className="w-3 h-3 mr-1" /> {msg.target_user_ids.length} pessoa(s)
+        </Badge>
+      );
+    }
     if (badges.length === 0) {
       badges.push(<Badge key="all" variant="outline" className="text-xs"><Users className="w-3 h-3 mr-1" /> Todos</Badge>);
     }
