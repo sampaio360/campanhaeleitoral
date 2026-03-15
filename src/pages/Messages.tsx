@@ -215,7 +215,7 @@ const Messages = () => {
         }
       }
 
-      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], notificar_whatsapp: false });
+      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], target_user_ids: [], notificar_whatsapp: false });
       setShowForm(false);
       fetchMessages();
     }
