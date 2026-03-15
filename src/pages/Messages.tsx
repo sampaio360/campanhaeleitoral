@@ -27,6 +27,7 @@ interface TeamMessage {
   created_at: string;
   target_roles: string[] | null;
   target_cidade: string | null;
+  target_user_ids: string[] | null;
 }
 
 interface MessageRead {
