@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, Phone } from "lucide-react";
+import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, Phone, User } from "lucide-react";
+import { UserSelector } from "@/components/messages/UserSelector";
 
 interface TeamMessage {
   id: string;
@@ -26,6 +27,7 @@ interface TeamMessage {
   created_at: string;
   target_roles: string[] | null;
   target_cidade: string | null;
+  target_user_ids: string[] | null;
 }
 
 interface MessageRead {
@@ -64,6 +66,7 @@ const Messages = () => {
     prioridade: "normal",
     target_cidade: "",
     target_roles: [] as string[],
+    target_user_ids: [] as string[],
     notificar_whatsapp: false,
   });
   const [whatsappResult, setWhatsappResult] = useState<any>(null);
@@ -171,6 +174,7 @@ const Messages = () => {
       prioridade: form.prioridade,
       target_roles: form.target_roles.length > 0 ? form.target_roles : null,
       target_cidade: form.target_cidade || null,
+      target_user_ids: form.target_user_ids.length > 0 ? form.target_user_ids : null,
     });
 
     if (error) {
@@ -211,7 +215,7 @@ const Messages = () => {
         }
       }
 
-      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], notificar_whatsapp: false });
+      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], target_user_ids: [], notificar_whatsapp: false });
       setShowForm(false);
       fetchMessages();
     }
@@ -231,6 +235,13 @@ const Messages = () => {
           </Badge>
         );
       });
+    }
+    if (msg.target_user_ids && msg.target_user_ids.length > 0) {
+      badges.push(
+        <Badge key="users" variant="secondary" className="text-xs">
+          <User className="w-3 h-3 mr-1" /> {msg.target_user_ids.length} pessoa(s)
+        </Badge>
+      );
     }
     if (badges.length === 0) {
       badges.push(<Badge key="all" variant="outline" className="text-xs"><Users className="w-3 h-3 mr-1" /> Todos</Badge>);
@@ -390,6 +401,11 @@ const Messages = () => {
                     ))}
                   </div>
                 </div>
+
+                <UserSelector
+                  selectedIds={form.target_user_ids}
+                  onChange={(ids) => setForm(p => ({ ...p, target_user_ids: ids }))}
+                />
 
                 <div className="space-y-2">
                   <Label>Conteúdo *</Label>

@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
+        importScripts: ["/sw-push.js"],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
         runtimeCaching: [
           {

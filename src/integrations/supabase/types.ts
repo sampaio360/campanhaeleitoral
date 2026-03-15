@@ -816,6 +816,39 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          device_name: string | null
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          device_name?: string | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          device_name?: string | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           campanha_id: string | null
@@ -1294,6 +1327,7 @@ export type Database = {
           sender_id: string
           target_cidade: string | null
           target_roles: string[] | null
+          target_user_ids: string[] | null
           titulo: string
         }
         Insert: {
@@ -1306,6 +1340,7 @@ export type Database = {
           sender_id: string
           target_cidade?: string | null
           target_roles?: string[] | null
+          target_user_ids?: string[] | null
           titulo: string
         }
         Update: {
@@ -1318,6 +1353,7 @@ export type Database = {
           sender_id?: string
           target_cidade?: string | null
           target_roles?: string[] | null
+          target_user_ids?: string[] | null
           titulo?: string
         }
         Relationships: [
