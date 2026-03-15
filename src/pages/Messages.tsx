@@ -68,6 +68,7 @@ const Messages = () => {
     target_roles: [] as string[],
     target_user_ids: [] as string[],
     notificar_whatsapp: false,
+    notificar_push: false,
   });
   const [whatsappResult, setWhatsappResult] = useState<any>(null);
 
