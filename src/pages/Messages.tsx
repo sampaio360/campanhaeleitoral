@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, Phone, User, Bell } from "lucide-react";
+import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, User, Bell } from "lucide-react";
 import { UserSelector } from "@/components/messages/UserSelector";
 
 interface TeamMessage {
@@ -67,10 +67,8 @@ const Messages = () => {
     target_cidade: "",
     target_roles: [] as string[],
     target_user_ids: [] as string[],
-    notificar_whatsapp: false,
     notificar_push: false,
   });
-  const [whatsappResult, setWhatsappResult] = useState<any>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!activeCampanhaId) { setLoading(false); return; }
@@ -164,8 +162,6 @@ const Messages = () => {
     e.preventDefault();
     if (!user || !activeCampanhaId) return;
     setSending(true);
-    setWhatsappResult(null);
-
     const { error } = await (supabase.from("team_messages" as any) as any).insert({
       campanha_id: activeCampanhaId,
       sender_id: user.id,
@@ -182,39 +178,6 @@ const Messages = () => {
       toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Mensagem enviada!" });
-
-      // Send WhatsApp notification if checked
-      if (form.notificar_whatsapp) {
-        try {
-          const { data: session } = await supabase.auth.getSession();
-          const res = await fetch(
-            `https://mjfmthjpibbvlehgoacr.supabase.co/functions/v1/send-whatsapp`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session?.session?.access_token}`,
-              },
-              body: JSON.stringify({
-                campanha_id: activeCampanhaId,
-                titulo: form.titulo,
-                conteudo: form.conteudo,
-                target_cidade: form.target_cidade || null,
-                target_roles: form.target_roles.length > 0 ? form.target_roles : null,
-              }),
-            }
-          );
-          const result = await res.json();
-          setWhatsappResult(result);
-          if (result.simulation) {
-            toast({ title: `📱 WhatsApp (simulação): ${result.enviados}/${result.total_destinatarios} notificados` });
-          } else {
-            toast({ title: `📱 WhatsApp: ${result.enviados}/${result.total_destinatarios} enviados` });
-          }
-        } catch (err) {
-          toast({ title: "Erro ao notificar via WhatsApp", variant: "destructive" });
-        }
-      }
 
       // Send Push notification if checked
       if (form.notificar_push) {
@@ -243,7 +206,7 @@ const Messages = () => {
         }
       }
 
-      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], target_user_ids: [], notificar_whatsapp: false, notificar_push: false });
+      setForm({ titulo: "", conteudo: "", prioridade: "normal", target_cidade: "", target_roles: [], target_user_ids: [], notificar_push: false });
       setShowForm(false);
       fetchMessages();
     }
@@ -442,23 +405,6 @@ const Messages = () => {
 
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
                   <Checkbox
-                    checked={form.notificar_whatsapp}
-                    onCheckedChange={(checked) => setForm(p => ({ ...p, notificar_whatsapp: !!checked }))}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium">Notificar via WhatsApp</span>
-                      <Badge variant="outline" className="text-xs">Simulação</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Envia notificação para apoiadores com telefone cadastrado
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
-                  <Checkbox
                     checked={form.notificar_push}
                     onCheckedChange={(checked) => setForm(p => ({ ...p, notificar_push: !!checked }))}
                   />
@@ -472,18 +418,6 @@ const Messages = () => {
                     </p>
                   </div>
                 </div>
-
-                {whatsappResult && (
-                  <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
-                    <p className="font-medium flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      Resultado WhatsApp {whatsappResult.simulation && "(Simulação)"}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {whatsappResult.enviados}/{whatsappResult.total_destinatarios} destinatários notificados
-                    </p>
-                  </div>
-                )}
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={sending || !form.titulo || !form.conteudo}>
