@@ -406,7 +406,6 @@ const Messages = () => {
                   selectedIds={form.target_user_ids}
                   onChange={(ids) => setForm(p => ({ ...p, target_user_ids: ids }))}
                 />
-                </div>
 
                 <div className="space-y-2">
                   <Label>Conteúdo *</Label>
