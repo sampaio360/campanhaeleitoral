@@ -405,23 +405,6 @@ const Messages = () => {
 
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
                   <Checkbox
-                    checked={form.notificar_whatsapp}
-                    onCheckedChange={(checked) => setForm(p => ({ ...p, notificar_whatsapp: !!checked }))}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium">Notificar via WhatsApp</span>
-                      <Badge variant="outline" className="text-xs">Simulação</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Envia notificação para apoiadores com telefone cadastrado
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
-                  <Checkbox
                     checked={form.notificar_push}
                     onCheckedChange={(checked) => setForm(p => ({ ...p, notificar_push: !!checked }))}
                   />
