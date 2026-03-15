@@ -457,6 +457,22 @@ const Messages = () => {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30">
+                  <Checkbox
+                    checked={form.notificar_push}
+                    onCheckedChange={(checked) => setForm(p => ({ ...p, notificar_push: !!checked }))}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">Notificar via Push</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Envia notificação push para dispositivos com PWA instalada
+                    </p>
+                  </div>
+                </div>
+
                 {whatsappResult && (
                   <div className="p-3 rounded-lg bg-muted text-sm space-y-1">
                     <p className="font-medium flex items-center gap-2">
