@@ -48,7 +48,9 @@ Deno.serve(async (req) => {
 
     const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT")!;
+    // Sanitize VAPID_SUBJECT: remove angle brackets, extra spaces
+    const rawSubject = Deno.env.get("VAPID_SUBJECT")!;
+    const VAPID_SUBJECT = rawSubject.replace(/[<>]/g, "").replace(/\s+/g, "").trim();
 
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
