@@ -26,6 +26,7 @@ interface AuthContextType {
   isMaster: boolean;
   campanhaId: string | null;
   selectedCampanhaId: string | null;
+  allowedCampanhaCount: number;
   setSelectedCampanhaId: (id: string | null) => void;
   signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;

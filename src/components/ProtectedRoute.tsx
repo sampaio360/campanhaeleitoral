@@ -40,7 +40,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   // Campaign gate: admin/master with multiple campaigns and no selection
-  const needsCampaignGate = (isAdmin || isMaster) && !campanhaId && !selectedCampanhaId;
+  const { allowedCampanhaCount } = useAuth();
+  const needsCampaignGate = (isAdmin || isMaster) && !selectedCampanhaId && allowedCampanhaCount > 1;
   if (needsCampaignGate) {
     return <CampaignGate onSelected={() => {}} />;
   }
