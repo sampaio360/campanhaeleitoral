@@ -48,10 +48,15 @@ Deno.serve(async (req) => {
 
     const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-    // Sanitize VAPID_SUBJECT: remove angle brackets, extra spaces
-    const rawSubject = Deno.env.get("VAPID_SUBJECT")!;
-    const VAPID_SUBJECT = rawSubject.replace(/[<>]/g, "").replace(/\s+/g, "").trim();
+    // Sanitize VAPID_SUBJECT: remove quotes, angle brackets, spaces, BOM, zero-width chars
+    const rawSubject = Deno.env.get("VAPID_SUBJECT") || "";
+    const VAPID_SUBJECT = rawSubject
+      .replace(/[\u200B\u200C\u200D\uFEFF\u00A0]/g, "")
+      .replace(/[<>"'`]/g, "")
+      .replace(/\s+/g, "")
+      .trim() || "mailto:nailton.alsampaio@gmail.com";
 
+    console.log("VAPID_SUBJECT sanitized:", JSON.stringify(VAPID_SUBJECT));
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
     // Use service role to query subscriptions
