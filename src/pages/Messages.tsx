@@ -111,6 +111,23 @@ const Messages = () => {
     }
   }, [activeCampanhaId]);
 
+  const fetchUserCidade = useCallback(async () => {
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("supporter_id")
+      .eq("id", user.id)
+      .single();
+    if (profile?.supporter_id) {
+      const { data: supporter } = await supabase
+        .from("supporters")
+        .select("cidade")
+        .eq("id", profile.supporter_id)
+        .single();
+      if (supporter?.cidade) setUserCidade(supporter.cidade);
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchMessages();
     fetchReads();
