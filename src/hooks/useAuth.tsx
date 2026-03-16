@@ -126,24 +126,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       fetchUserRoles(userId),
     ]);
 
-    // Auto-select campanha: if user has exactly 1, select it automatically
-    const isAdmin = roles.includes('admin');
+    const isAdminRole = roles.includes('admin');
     const isMasterRole = roles.includes('master');
-    if ((isAdmin || isMasterRole) && !profileData?.campanha_id && !selectedCampanhaId) {
-      if (isMasterRole) {
+
+    // Read current stored value directly from localStorage
+    let currentSelected: string | null = null;
+    try { currentSelected = localStorage.getItem('selectedCampanhaId'); } catch {}
+
+    if (isMasterRole) {
+      // Master: no restriction, just auto-select if only 1 campanha
+      if (!currentSelected) {
         const { data } = await supabase.from('campanhas').select('id').is('deleted_at', null);
         const ids = data?.map(d => d.id) || [];
-        if (ids.length === 1) {
-          setSelectedCampanhaId(ids[0]);
-        }
-      } else if (isAdmin) {
-        const campIds = await fetchAdminCampanhas(userId);
-        if (campIds.length === 1) {
-          setSelectedCampanhaId(campIds[0]);
-        }
+        if (ids.length === 1) setSelectedCampanhaId(ids[0]);
+      }
+    } else if (isAdminRole) {
+      // Admin: validate against allowed campanhas
+      const campIds = await fetchAdminCampanhas(userId);
+      const allowedIds = [...campIds];
+      if (profileData?.campanha_id && !allowedIds.includes(profileData.campanha_id)) {
+        allowedIds.push(profileData.campanha_id);
+      }
+
+      if (currentSelected && !allowedIds.includes(currentSelected)) {
+        // Stored campanha not allowed for this user — clear it
+        setSelectedCampanhaId(null);
+        currentSelected = null;
+      }
+
+      if (!currentSelected && allowedIds.length === 1) {
+        setSelectedCampanhaId(allowedIds[0]);
+      }
+    } else {
+      // Regular user: only their profile campanha is allowed
+      if (currentSelected && currentSelected !== profileData?.campanha_id) {
+        setSelectedCampanhaId(null);
       }
     }
-  }, [fetchProfile, fetchAdminCampanhas, selectedCampanhaId]);
+  }, [fetchProfile, fetchAdminCampanhas, setSelectedCampanhaId]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
