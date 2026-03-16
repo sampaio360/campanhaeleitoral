@@ -132,7 +132,8 @@ const Messages = () => {
     fetchMessages();
     fetchReads();
     fetchCities();
-  }, [fetchMessages, fetchReads, fetchCities]);
+    fetchUserCidade();
+  }, [fetchMessages, fetchReads, fetchCities, fetchUserCidade]);
 
   const sentMessages = useMemo(() =>
     messages.filter(m => m.sender_id === user?.id),
