@@ -249,6 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isMaster,
       campanhaId,
       selectedCampanhaId,
+      allowedCampanhaCount,
       setSelectedCampanhaId,
       signUp,
       signIn,
