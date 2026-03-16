@@ -216,8 +216,9 @@ const Messages = () => {
       conteudo: form.conteudo,
       cidade: form.target_cidade || null,
       prioridade: form.prioridade,
-      target_roles: form.target_roles.length > 0 ? form.target_roles : null,
-      target_cidade: form.target_cidade || null,
+      // When specific users are selected, ignore role/city filters
+      target_roles: form.target_user_ids.length > 0 ? null : (form.target_roles.length > 0 ? form.target_roles : null),
+      target_cidade: form.target_user_ids.length > 0 ? null : (form.target_cidade || null),
       target_user_ids: form.target_user_ids.length > 0 ? form.target_user_ids : null,
     });
 
