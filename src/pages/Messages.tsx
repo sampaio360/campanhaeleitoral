@@ -61,6 +61,7 @@ const Messages = () => {
   const [markingRead, setMarkingRead] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
+  const [userCidade, setUserCidade] = useState<string | null>(null);
   const [form, setForm] = useState({
     titulo: "",
     conteudo: "",
