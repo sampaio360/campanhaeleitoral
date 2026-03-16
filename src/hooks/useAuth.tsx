@@ -227,6 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
     setProfile(null);
     setUserRoles([]);
+    setSelectedCampanhaId(null);
   };
 
   const isMaster = userRoles.includes('master');
