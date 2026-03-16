@@ -161,7 +161,6 @@ const Messages = () => {
     e.preventDefault();
     if (!user || !activeCampanhaId) return;
     setSending(true);
-    setWhatsappResult(null);
 
     const { error } = await (supabase.from("team_messages" as any) as any).insert({
       campanha_id: activeCampanhaId,
