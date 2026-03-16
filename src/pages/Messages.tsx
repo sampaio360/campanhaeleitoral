@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, AlertTriangle, Loader2, Inbox, SendHorizonal, Users, CheckCheck, Eye, User } from "lucide-react";
 import { UserSelector } from "@/components/messages/UserSelector";
+import { PushNotificationToggle } from "@/components/messages/PushNotificationToggle";
 
 interface TeamMessage {
   id: string;
@@ -326,16 +327,19 @@ const Messages = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-3xl font-bold">Comunicação Direta</h1>
             <p className="text-muted-foreground">Orientações do coordenador para equipes de campo</p>
           </div>
-          {isCoordinator && (
-            <Button onClick={() => setShowForm(!showForm)} className="gap-2">
-              <Send className="w-4 h-4" /> Nova Orientação
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <PushNotificationToggle />
+            {isCoordinator && (
+              <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+                <Send className="w-4 h-4" /> Nova Orientação
+              </Button>
+            )}
+          </div>
         </div>
 
         {showForm && isCoordinator && (
