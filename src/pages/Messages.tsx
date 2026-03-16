@@ -51,7 +51,7 @@ const ROLE_LABELS: Record<string, string> = {
 const SELECTABLE_ROLES = ["admin", "coordinator", "assessor", "territorial_coordinator", "supervisor", "local_coordinator", "political_leader", "supporter"];
 
 const Messages = () => {
-  const { user, isCoordinator } = useAuth();
+  const { user, isCoordinator, userRoles } = useAuth();
   const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
   const [messages, setMessages] = useState<TeamMessage[]>([]);
@@ -61,6 +61,7 @@ const Messages = () => {
   const [markingRead, setMarkingRead] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
+  const [userCidade, setUserCidade] = useState<string | null>(null);
   const [form, setForm] = useState({
     titulo: "",
     conteudo: "",
@@ -110,11 +111,29 @@ const Messages = () => {
     }
   }, [activeCampanhaId]);
 
+  const fetchUserCidade = useCallback(async () => {
+    if (!user) return;
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("supporter_id")
+      .eq("id", user.id)
+      .single();
+    if (profile?.supporter_id) {
+      const { data: supporter } = await supabase
+        .from("supporters")
+        .select("cidade")
+        .eq("id", profile.supporter_id)
+        .single();
+      if (supporter?.cidade) setUserCidade(supporter.cidade);
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchMessages();
     fetchReads();
     fetchCities();
-  }, [fetchMessages, fetchReads, fetchCities]);
+    fetchUserCidade();
+  }, [fetchMessages, fetchReads, fetchCities, fetchUserCidade]);
 
   const sentMessages = useMemo(() =>
     messages.filter(m => m.sender_id === user?.id),
@@ -122,8 +141,35 @@ const Messages = () => {
   );
 
   const receivedMessages = useMemo(() =>
-    messages.filter(m => m.sender_id !== user?.id),
-    [messages, user?.id]
+    messages.filter(m => {
+      if (m.sender_id === user?.id) return false;
+
+      const hasTargetUsers = m.target_user_ids && m.target_user_ids.length > 0;
+      const hasTargetRoles = m.target_roles && m.target_roles.length > 0;
+      const hasTargetCidade = !!m.target_cidade;
+
+      // If no targeting at all, it's for everyone
+      if (!hasTargetUsers && !hasTargetRoles && !hasTargetCidade) return true;
+
+      // If specific users are targeted, only show if current user is in the list
+      if (hasTargetUsers) {
+        return m.target_user_ids!.includes(user?.id || "");
+      }
+
+      // Check role and city targeting
+      let matchesRole = true;
+      let matchesCidade = true;
+
+      if (hasTargetRoles) {
+        matchesRole = m.target_roles!.some(role => userRoles.includes(role as any));
+      }
+      if (hasTargetCidade) {
+        matchesCidade = userCidade?.toLowerCase() === m.target_cidade?.toLowerCase();
+      }
+
+      return matchesRole && matchesCidade;
+    }),
+    [messages, user?.id, userRoles, userCidade]
   );
 
   const unreadCount = useMemo(() =>
