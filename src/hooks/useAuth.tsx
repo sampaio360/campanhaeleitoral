@@ -148,9 +148,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (profileData?.campanha_id && !allowedIds.includes(profileData.campanha_id)) {
         allowedIds.push(profileData.campanha_id);
       }
+      setAllowedCampanhaCount(allowedIds.length);
 
       if (currentSelected && !allowedIds.includes(currentSelected)) {
-        // Stored campanha not allowed for this user — clear it
         setSelectedCampanhaId(null);
         currentSelected = null;
       }
