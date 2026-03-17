@@ -448,25 +448,26 @@ const AgendaPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <CalendarDays className="w-8 h-8 text-primary" /> Agenda da Campanha
-            </h1>
-            <p className="text-muted-foreground">Compromissos, eventos e atividades de campanha</p>
+      <Tabs value={viewTab} onValueChange={setViewTab} className="container mx-auto px-4 pt-8">
+        {/* Sticky Header */}
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <CalendarDays className="w-8 h-8 text-primary" /> Agenda da Campanha
+              </h1>
+              <p className="text-muted-foreground">Compromissos, eventos e atividades de campanha</p>
+            </div>
+            <Button onClick={() => openCreate()} className="gap-2">
+              <Plus className="w-4 h-4" /> Novo Evento
+            </Button>
           </div>
-          <Button onClick={() => openCreate()} className="gap-2">
-            <Plus className="w-4 h-4" /> Novo Evento
-          </Button>
-        </div>
 
-        <Tabs value={viewTab} onValueChange={setViewTab}>
-          <TabsList className="mb-4">
+          <TabsList>
             <TabsTrigger value="calendario">Calendário</TabsTrigger>
             <TabsTrigger value="lista">Lista</TabsTrigger>
           </TabsList>
+        </div>
 
           {/* ───── CALENDAR VIEW ───── */}
           <TabsContent value="calendario">
@@ -577,7 +578,6 @@ const AgendaPage = () => {
               <div className="space-y-3">{filteredEvents.map(renderEventCard)}</div>
             )}
           </TabsContent>
-        </Tabs>
 
         {/* ───── EVENT FORM DIALOG ───── */}
         <Dialog open={showForm} onOpenChange={(o) => { if (!o) { setShowForm(false); setEditingEvent(null); } }}>
@@ -736,7 +736,7 @@ const AgendaPage = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </Tabs>
     </div>
   );
 };
