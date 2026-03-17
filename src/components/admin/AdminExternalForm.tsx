@@ -33,7 +33,7 @@ const FIELD_OPTIONS = [
   { key: "observacao", label: "Observação" },
 ];
 
-const BASE_URL = "https://www.gerencialcampanha.com.br";
+import { BASE_URL } from "@/lib/constants";
 
 export function AdminExternalForm() {
   const { user } = useAuth();
