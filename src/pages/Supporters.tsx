@@ -57,7 +57,7 @@ const Supporters = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 400);
   const [filterCidade, setFilterCidade] = useState("all");
   const [filterBairro, setFilterBairro] = useState("all");
   const [filterLideranca, setFilterLideranca] = useState("all");
@@ -66,19 +66,8 @@ const Supporters = () => {
   // Pagination
   const [page, setPage] = useState(0);
 
-  // BASE_URL importada de constants
-
-  // Debounce search
-  const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    if (searchTimer) clearTimeout(searchTimer);
-    const timer = setTimeout(() => {
-      setDebouncedSearch(value);
-      setPage(0);
-    }, 400);
-    setSearchTimer(timer);
-  };
+  // Reset page on search change
+  useEffect(() => { setPage(0); }, [debouncedSearch]);
 
   // Filter options query (lightweight – only distinct cities/bairros)
   const { data: filterOptions } = useQuery({
