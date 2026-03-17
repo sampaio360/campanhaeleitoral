@@ -94,10 +94,10 @@ export function useEffectivenessRanking(overrideCampanhaId?: string | null) {
       .eq("status", "completed");
 
     // Get resource costs by city
-    const { data: resources } = await (supabase
-      .from("resource_requests" as any)
+    const { data: resources } = await supabase
+      .from("resource_requests")
       .select("cidade, valor_estimado")
-      .eq("campanha_id", campanhaId) as any);
+      .eq("campanha_id", campanhaId);
 
     // Count unique streets per city
     const cityStreets = new Map<string, Set<string>>();
