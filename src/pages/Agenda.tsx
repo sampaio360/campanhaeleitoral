@@ -508,7 +508,7 @@ const AgendaPage = () => {
                             setSelectedDate(day);
                             setViewTab("lista");
                           } else {
-                            setSelectedDate(selected ? null : day);
+                            openCreate(day);
                           }
                         }}
                         className={`
