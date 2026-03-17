@@ -326,7 +326,7 @@ const Supporters = () => {
                 <Input
                   placeholder="Buscar por nome, e-mail, telefone ou CPF..."
                   value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"
                 />
               </div>
