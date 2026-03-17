@@ -101,7 +101,7 @@ export function useEffectivenessRanking(overrideCampanhaId?: string | null) {
 
     // Count unique streets per city
     const cityStreets = new Map<string, Set<string>>();
-    ((checkins as any[]) || []).forEach((c) => {
+    (checkins || []).forEach((c: any) => {
       const cidade = c.streets?.cidade || "Sem cidade";
       if (!cityStreets.has(cidade)) cityStreets.set(cidade, new Set());
       cityStreets.get(cidade)!.add(c.street_id);
