@@ -1,26 +1,17 @@
 
 
-## Melhoria #1: Campanha + Função no Dialog de Criação de Usuário
+## Etapa 1 — Corrigir violacao de Hook no ProtectedRoute
 
 ### Problema
-Ao criar um usuário em AdminUsers, apenas nome, email, senha e PIN são enviados. O usuário é criado "solto" -- sem campanha e sem função. O admin precisa fazer 2 passos manuais extras, que podem ser esquecidos.
+Em `ProtectedRoute.tsx` linha 44, `useAuth()` e chamado uma segunda vez **depois** de retornos condicionais (`if (!user) return ...`, `if (!pinVerified) return ...`). Isso viola as regras de Hooks do React — hooks devem ser chamados sempre na mesma ordem, nunca apos condicionais com `return`.
 
-### Solução
-Adicionar dois campos ao dialog de criação:
-1. **Campanha** (Select) -- pre-selecionada com a campanha ativa do admin
-2. **Função** (Select) -- lista de roles disponíveis (filtrando admin/master se não for master)
+### Correcao
+Mover a desestruturacao de `allowedCampanhaCount` para usar o mesmo `useAuth()` ja chamado no topo do componente (linha 17). Basta adicionar `allowedCampanhaCount` na desestruturacao existente e remover a segunda chamada na linha 44.
 
-### Alterações
+### Mudanca concreta
+**`src/components/ProtectedRoute.tsx`**
+- Linha 17: adicionar `allowedCampanhaCount` na desestruturacao existente de `useAuth()`
+- Linhas 44-45: remover a segunda chamada `const { allowedCampanhaCount } = useAuth()` e usar a variavel ja disponivel
 
-**`src/components/admin/AdminUsers.tsx`**
-- Adicionar estados `newUserRole` e `newUserCampanhaId` (pre-setado com `activeCampanhaId`)
-- Adicionar dois `Select` no dialog: campanha e função
-- Enviar `role` e `campanha_id` no `createUserMutation` body
-- Resetar os novos campos no `resetCreateForm`
-
-**`supabase/functions/create-user/index.ts`**
-- Já aceita `role` e `campanha_id` no body -- nenhuma alteração necessária na edge function
-
-### Resultado
-Ao criar um usuário, ele já sai vinculado à campanha e com a função correta, eliminando passos manuais e risco de usuários órfãos.
+Nenhuma outra alteracao. Etapa cirurgica, zero risco de efeito colateral.
 
