@@ -255,15 +255,17 @@ const StreetCheckin = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Check-in de Rua</h1>
-            <p className="text-muted-foreground">Registro de ações de campo em tempo real</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="flex items-center justify-between pt-8">
+            <div>
+              <h1 className="text-3xl font-bold">Check-in de Rua</h1>
+              <p className="text-muted-foreground">Registro de ações de campo em tempo real</p>
+            </div>
+            <Button onClick={() => setShowAddStreet(!showAddStreet)} variant="outline" className="gap-2">
+              <Plus className="w-4 h-4" /> Nova Rua
+            </Button>
           </div>
-          <Button onClick={() => setShowAddStreet(!showAddStreet)} variant="outline" className="gap-2">
-            <Plus className="w-4 h-4" /> Nova Rua
-          </Button>
         </div>
 
         <CascadingAddressForm

@@ -106,17 +106,19 @@ const ROI = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">ROI Político</h1>
-            <p className="text-muted-foreground">Custo por voto e eficiência de investimento por cidade</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="flex items-center justify-between pt-8">
+            <div>
+              <h1 className="text-3xl font-bold">ROI Político</h1>
+              <p className="text-muted-foreground">Custo por voto e eficiência de investimento por cidade</p>
+            </div>
+            {candidateId && (
+              <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
+                <Upload className="w-4 h-4" /> Importar Votos
+              </Button>
+            )}
           </div>
-          {candidateId && (
-            <Button variant="outline" className="gap-2" onClick={() => setShowImport(true)}>
-              <Upload className="w-4 h-4" /> Importar Votos
-            </Button>
-          )}
         </div>
 
         {candidateId && (

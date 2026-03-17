@@ -170,24 +170,25 @@ const Municipios = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold">Municípios</h1>
-          <p className="text-sm text-muted-foreground">Gerencie municípios, eleições e histórico de votação</p>
-        </div>
-
+      <div className="container mx-auto px-4">
         <Tabs defaultValue="municipios" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="municipios" className="gap-2">
-              <MapPin className="w-4 h-4" /> Municípios
-            </TabsTrigger>
-            <TabsTrigger value="eleicoes" className="gap-2">
-              <CalendarDays className="w-4 h-4" /> Eleições
-            </TabsTrigger>
-            <TabsTrigger value="historico" className="gap-2">
-              <Vote className="w-4 h-4" /> Histórico
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+            <div className="mb-4 pt-6 sm:pt-8">
+              <h1 className="text-2xl sm:text-3xl font-bold">Municípios</h1>
+              <p className="text-sm text-muted-foreground">Gerencie municípios, eleições e histórico de votação</p>
+            </div>
+            <TabsList>
+              <TabsTrigger value="municipios" className="gap-2">
+                <MapPin className="w-4 h-4" /> Municípios
+              </TabsTrigger>
+              <TabsTrigger value="eleicoes" className="gap-2">
+                <CalendarDays className="w-4 h-4" /> Eleições
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2">
+                <Vote className="w-4 h-4" /> Histórico
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ── Municípios Tab ── */}
           <TabsContent value="municipios">

@@ -141,16 +141,18 @@ const Expenses = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Despesas</h1>
-          <p className="text-sm text-muted-foreground">Controle de gastos da campanha</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold">Despesas</h1>
+              <p className="text-sm text-muted-foreground">Controle de gastos da campanha</p>
+            </div>
+            <Button onClick={() => setShowForm(!showForm)} variant="campaign" className="gap-2 w-full sm:w-auto">
+              <PlusCircle className="w-4 h-4" /> Nova Despesa
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => setShowForm(!showForm)} variant="campaign" className="gap-2 w-full sm:w-auto">
-          <PlusCircle className="w-4 h-4" /> Nova Despesa
-        </Button>
-      </div>
 
       <Card className="mb-8">
         <CardContent className="p-6">

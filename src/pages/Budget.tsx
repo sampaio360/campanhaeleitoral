@@ -26,13 +26,14 @@ const Budget = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Financeiro</h1>
-          <p className="text-muted-foreground">Gerencie o orçamento e as finanças da campanha</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="mb-4 pt-8">
+            <h1 className="text-3xl font-bold">Financeiro</h1>
+            <p className="text-muted-foreground">Gerencie o orçamento e as finanças da campanha</p>
+          </div>
+          <BudgetModuleTabs activeModule={activeModule} onModuleChange={setActiveModule} />
         </div>
-
-        <BudgetModuleTabs activeModule={activeModule} onModuleChange={setActiveModule} />
 
         {activeModule === "overview" && (
           <BudgetOverview budgets={budgets} activeBudget={activeBudget} />

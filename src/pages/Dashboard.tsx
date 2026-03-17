@@ -47,10 +47,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">Dossiê de Bolso</h1>
-          <p className="text-sm text-muted-foreground">Visão executiva da campanha</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="pt-6 sm:pt-8">
+            <h1 className="text-2xl sm:text-3xl font-bold">Dossiê de Bolso</h1>
+            <p className="text-sm text-muted-foreground">Visão executiva da campanha</p>
+          </div>
         </div>
 
         <div className="space-y-6">
