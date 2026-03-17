@@ -229,25 +229,16 @@ const Messages = () => {
 
       // Always send Push notification
       try {
-        const { data: session } = await supabase.auth.getSession();
-        const res = await fetch(
-          `https://mjfmthjpibbvlehgoacr.supabase.co/functions/v1/send-push`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.session?.access_token}`,
-            },
-            body: JSON.stringify({
-              campanha_id: activeCampanhaId,
-              titulo: form.titulo,
-              conteudo: form.conteudo,
-              target_user_ids: form.target_user_ids.length > 0 ? form.target_user_ids : null,
-            }),
-          }
-        );
-        const result = await res.json();
-        toast({ title: `🔔 Push: ${result.enviados}/${result.total} notificações enviadas` });
+        const { data: pushResult, error: pushError } = await supabase.functions.invoke('send-push', {
+          body: {
+            campanha_id: activeCampanhaId,
+            titulo: form.titulo,
+            conteudo: form.conteudo,
+            target_user_ids: form.target_user_ids.length > 0 ? form.target_user_ids : null,
+          },
+        });
+        if (pushError) throw pushError;
+        toast({ title: `🔔 Push: ${pushResult.enviados}/${pushResult.total} notificações enviadas` });
       } catch (err) {
         console.error("Erro ao enviar push:", err);
       }
