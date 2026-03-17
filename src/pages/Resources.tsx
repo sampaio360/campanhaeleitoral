@@ -77,9 +77,9 @@ const Resources = () => {
     queryKey: ["resource-requests", campanhaId],
     queryFn: async () => {
       let query = supabase
-        .from("resource_requests" as any)
+        .from("resource_requests")
         .select("*")
-        .order("created_at", { ascending: false }) as any;
+        .order("created_at", { ascending: false });
       if (campanhaId) query = query.eq("campanha_id", campanhaId);
       const { data, error } = await query;
       if (error) throw error;
