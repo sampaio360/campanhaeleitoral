@@ -188,7 +188,7 @@ export function useAgendaData() {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await (supabase.from("agenda_events" as any) as any).delete().eq("id", id);
+    const { error } = await supabase.from("agenda_events").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
