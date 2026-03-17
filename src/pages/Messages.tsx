@@ -55,86 +55,74 @@ const Messages = () => {
   const { user, isCoordinator, userRoles } = useAuth();
   const activeCampanhaId = useActiveCampanhaId();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<TeamMessage[]>([]);
-  const [readMap, setReadMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [markingRead, setMarkingRead] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [cities, setCities] = useState<string[]>([]);
-  const [userCidade, setUserCidade] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    titulo: "",
-    conteudo: "",
-    prioridade: "normal",
-    target_cidade: "",
-    target_roles: [] as string[],
-    target_user_ids: [] as string[],
+  const queryClient = useQueryClient();
+
+  // Messages query
+  const { data: messages = [], isLoading: loading } = useQuery({
+    queryKey: ["team-messages", activeCampanhaId],
+    queryFn: async () => {
+      if (!activeCampanhaId) return [];
+      const { data, error } = await (supabase
+        .from("team_messages" as any)
+        .select("*")
+        .eq("campanha_id", activeCampanhaId)
+        .order("created_at", { ascending: false })
+        .limit(200) as any);
+      if (error) throw error;
+      return (data as TeamMessage[]) || [];
+    },
+    enabled: !!activeCampanhaId,
   });
 
-  const fetchMessages = useCallback(async () => {
-    if (!activeCampanhaId) { setLoading(false); return; }
-    const { data, error } = await (supabase
-      .from("team_messages" as any)
-      .select("*")
-      .eq("campanha_id", activeCampanhaId)
-      .order("created_at", { ascending: false })
-      .limit(200) as any);
-
-    if (!error) setMessages((data as TeamMessage[]) || []);
-    setLoading(false);
-  }, [activeCampanhaId]);
-
-  const fetchReads = useCallback(async () => {
-    if (!user) return;
-    const { data } = await (supabase
-      .from("message_reads" as any)
-      .select("message_id, read_at")
-      .eq("user_id", user.id) as any);
-
-    if (data) {
+  // Read status query
+  const { data: readMap = {} } = useQuery({
+    queryKey: ["message-reads", user?.id],
+    queryFn: async () => {
+      const { data } = await (supabase
+        .from("message_reads" as any)
+        .select("message_id, read_at")
+        .eq("user_id", user!.id) as any);
       const map: Record<string, string> = {};
-      (data as MessageRead[]).forEach(r => { map[r.message_id] = r.read_at; });
-      setReadMap(map);
-    }
-  }, [user]);
+      if (data) (data as MessageRead[]).forEach(r => { map[r.message_id] = r.read_at; });
+      return map;
+    },
+    enabled: !!user,
+  });
 
-  const fetchCities = useCallback(async () => {
-    if (!activeCampanhaId) return;
-    const { data } = await supabase
-      .from("supporters")
-      .select("cidade")
-      .eq("campanha_id", activeCampanhaId)
-      .not("cidade", "is", null);
-    if (data) {
-      const unique = [...new Set(data.map(d => d.cidade).filter(Boolean) as string[])].sort();
-      setCities(unique);
-    }
-  }, [activeCampanhaId]);
+  // Cities for targeting
+  const { data: cities = [] } = useQuery({
+    queryKey: ["messages-cities", activeCampanhaId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("supporters")
+        .select("cidade")
+        .eq("campanha_id", activeCampanhaId!)
+        .not("cidade", "is", null);
+      if (!data) return [];
+      return [...new Set(data.map(d => d.cidade).filter(Boolean) as string[])].sort();
+    },
+    enabled: !!activeCampanhaId,
+  });
 
-  const fetchUserCidade = useCallback(async () => {
-    if (!user) return;
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("supporter_id")
-      .eq("id", user.id)
-      .single();
-    if (profile?.supporter_id) {
+  // User city for message filtering
+  const { data: userCidade = null } = useQuery({
+    queryKey: ["user-cidade", user?.id],
+    queryFn: async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("supporter_id")
+        .eq("id", user!.id)
+        .single();
+      if (!profile?.supporter_id) return null;
       const { data: supporter } = await supabase
         .from("supporters")
         .select("cidade")
         .eq("id", profile.supporter_id)
         .single();
-      if (supporter?.cidade) setUserCidade(supporter.cidade);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchMessages();
-    fetchReads();
-    fetchCities();
-    fetchUserCidade();
-  }, [fetchMessages, fetchReads, fetchCities, fetchUserCidade]);
+      return supporter?.cidade || null;
+    },
+    enabled: !!user,
+  });
 
   const sentMessages = useMemo(() =>
     messages.filter(m => m.sender_id === user?.id),
