@@ -147,7 +147,7 @@ const Resources = () => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       toast({ title: `Status atualizado para ${STATUS_CONFIG[newStatus]?.label}` });
-      fetchRequests();
+      queryClient.invalidateQueries({ queryKey: ["resource-requests"] });
     }
   };
 
