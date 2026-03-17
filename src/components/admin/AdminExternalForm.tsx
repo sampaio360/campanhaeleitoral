@@ -17,6 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { BASE_URL } from "@/lib/constants";
 
 const FIELD_OPTIONS = [
   { key: "nome", label: "Nome Completo", locked: true },
@@ -32,8 +33,6 @@ const FIELD_OPTIONS = [
   { key: "foto", label: "Foto" },
   { key: "observacao", label: "Observação" },
 ];
-
-import { BASE_URL } from "@/lib/constants";
 
 export function AdminExternalForm() {
   const { user } = useAuth();
