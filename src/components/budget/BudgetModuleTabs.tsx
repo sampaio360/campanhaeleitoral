@@ -14,7 +14,7 @@ const modules = [
 
 export function BudgetModuleTabs({ activeModule, onModuleChange }: BudgetModuleTabsProps) {
   return (
-    <Tabs value={activeModule} onValueChange={onModuleChange} className="mb-6">
+    <Tabs value={activeModule} onValueChange={onModuleChange}>
       <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
         {modules.map((module) => {
           const Icon = module.icon;

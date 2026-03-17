@@ -190,30 +190,31 @@ const Resources = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Gestão de Recursos</h1>
-            <p className="text-muted-foreground">Solicitação de insumos vinculados a localidades</p>
-          </div>
-          {activeTab === "solicitacoes" && (
-            <Button onClick={() => setShowForm(!showForm)} className="gap-2">
-              <PlusCircle className="w-4 h-4" /> Nova Solicitação
-            </Button>
-          )}
-        </div>
-
+      <div className="container mx-auto px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="solicitacoes" className="gap-2">
-              <ClipboardList className="w-4 h-4" />
-              Solicitações
-            </TabsTrigger>
-            <TabsTrigger value="inventario" className="gap-2">
-              <Boxes className="w-4 h-4" />
-              Inventário
-            </TabsTrigger>
-          </TabsList>
+          <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+            <div className="flex items-center justify-between mb-4 pt-8">
+              <div>
+                <h1 className="text-3xl font-bold">Gestão de Recursos</h1>
+                <p className="text-muted-foreground">Solicitação de insumos vinculados a localidades</p>
+              </div>
+              {activeTab === "solicitacoes" && (
+                <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+                  <PlusCircle className="w-4 h-4" /> Nova Solicitação
+                </Button>
+              )}
+            </div>
+            <TabsList>
+              <TabsTrigger value="solicitacoes" className="gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Solicitações
+              </TabsTrigger>
+              <TabsTrigger value="inventario" className="gap-2">
+                <Boxes className="w-4 h-4" />
+                Inventário
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="solicitacoes">
             {showForm && (

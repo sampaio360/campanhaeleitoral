@@ -208,16 +208,18 @@ const Reports = () => {
   return (
     <div className="min-h-screen bg-background print:bg-white">
       <div className="print:hidden"><Navbar /></div>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8 print:mb-4">
-          <div>
-            <h1 className="text-3xl font-bold">Relatórios</h1>
-            <p className="text-muted-foreground print:hidden">Análises e relatórios da campanha</p>
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4 print:static print:pb-0">
+          <div className="flex items-center justify-between pt-8 print:mb-4">
+            <div>
+              <h1 className="text-3xl font-bold">Relatórios</h1>
+              <p className="text-muted-foreground print:hidden">Análises e relatórios da campanha</p>
+            </div>
+            <Button onClick={handleExportPDF} variant="campaign" className="gap-2 print:hidden">
+              <Download className="w-4 h-4" />
+              Exportar PDF
+            </Button>
           </div>
-          <Button onClick={handleExportPDF} variant="campaign" className="gap-2 print:hidden">
-            <Download className="w-4 h-4" />
-            Exportar PDF
-          </Button>
         </div>
 
         {/* KPIs */}

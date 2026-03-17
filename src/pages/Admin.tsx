@@ -51,42 +51,44 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Administrador</h1>
-          <p className="text-muted-foreground">Gerencie usuários, permissões e campanhas</p>
-        </div>
-
-        {/* Workflow steps indicator */}
-        <div className="hidden md:flex items-center gap-1 mb-6 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
-          {adminTabs.filter(t => t.step).map((tab, i, arr) => (
-            <span key={tab.value} className="flex items-center gap-1">
-              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
-                {tab.step}
-              </span>
-              <span className={activeTab === tab.value ? 'text-foreground font-medium' : ''}>{tab.label}</span>
-              {i < arr.length - 1 && <span className="mx-1 text-muted-foreground/40">→</span>}
-            </span>
-          ))}
-        </div>
-
+      <div className="container mx-auto px-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap w-full lg:w-auto lg:inline-flex mb-2">
-            {visibleTabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
-                  {tab.step && (
-                    <span className="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-muted-foreground/20 text-[9px] font-bold">
-                      {tab.step}
-                    </span>
-                  )}
-                  <Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+            <div className="mb-4 pt-8">
+              <h1 className="text-3xl font-bold">Administrador</h1>
+              <p className="text-muted-foreground">Gerencie usuários, permissões e campanhas</p>
+            </div>
+
+            {/* Workflow steps indicator */}
+            <div className="hidden md:flex items-center gap-1 mb-4 p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
+              {adminTabs.filter(t => t.step).map((tab, i, arr) => (
+                <span key={tab.value} className="flex items-center gap-1">
+                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                    {tab.step}
+                  </span>
+                  <span className={activeTab === tab.value ? 'text-foreground font-medium' : ''}>{tab.label}</span>
+                  {i < arr.length - 1 && <span className="mx-1 text-muted-foreground/40">→</span>}
+                </span>
+              ))}
+            </div>
+
+            <TabsList className="flex flex-wrap w-full lg:w-auto lg:inline-flex">
+              {visibleTabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger key={tab.value} value={tab.value} className="gap-2">
+                    {tab.step && (
+                      <span className="hidden sm:inline-flex items-center justify-center w-4 h-4 rounded-full bg-muted-foreground/20 text-[9px] font-bold">
+                        {tab.step}
+                      </span>
+                    )}
+                    <Icon className="w-4 h-4" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
 
           {activeTabData?.hint && (
             <p className="text-sm text-muted-foreground mb-4">{activeTabData.hint}</p>

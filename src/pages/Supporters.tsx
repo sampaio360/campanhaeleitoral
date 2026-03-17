@@ -284,31 +284,33 @@ const Supporters = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Pessoas</h1>
-            <p className="text-sm text-muted-foreground">Gerencie as pessoas vinculadas à campanha</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {formEnabled && inviteToken && (
-              <Button onClick={copyExternalLink} variant="outline" className="gap-2 w-full sm:w-auto">
-                <Link2 className="w-4 h-4" />
-                Copiar Link de Cadastro
+      <div className="container mx-auto px-4">
+        <div className="sticky top-14 sm:top-16 z-40 bg-background pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-8">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Pessoas</h1>
+              <p className="text-sm text-muted-foreground">Gerencie as pessoas vinculadas à campanha</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {formEnabled && inviteToken && (
+                <Button onClick={copyExternalLink} variant="outline" className="gap-2 w-full sm:w-auto">
+                  <Link2 className="w-4 h-4" />
+                  Copiar Link de Cadastro
+                </Button>
+              )}
+              <Button onClick={handleGenerateReport} variant="outline" className="gap-2 w-full sm:w-auto" disabled={totalCount === 0}>
+                <Printer className="w-4 h-4" />
+                Relatório PDF
               </Button>
-            )}
-            <Button onClick={handleGenerateReport} variant="outline" className="gap-2 w-full sm:w-auto" disabled={totalCount === 0}>
-              <Printer className="w-4 h-4" />
-              Relatório PDF
-            </Button>
-            <Button
-              onClick={() => { setEditingSupporter(null); setShowForm(!showForm); }}
-              variant="campaign"
-              className="gap-2 w-full sm:w-auto"
-            >
-              <UserPlus className="w-4 h-4" />
-              {showForm && !editingSupporter ? "Fechar" : "Cadastrar Pessoa"}
-            </Button>
+              <Button
+                onClick={() => { setEditingSupporter(null); setShowForm(!showForm); }}
+                variant="campaign"
+                className="gap-2 w-full sm:w-auto"
+              >
+                <UserPlus className="w-4 h-4" />
+                {showForm && !editingSupporter ? "Fechar" : "Cadastrar Pessoa"}
+              </Button>
+            </div>
           </div>
         </div>
 
