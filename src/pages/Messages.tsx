@@ -89,10 +89,10 @@ const Messages = () => {
   const { data: readMap = {} } = useQuery({
     queryKey: ["message-reads", user?.id],
     queryFn: async () => {
-      const { data } = await (supabase
-        .from("message_reads" as any)
+      const { data } = await supabase
+        .from("message_reads")
         .select("message_id, read_at")
-        .eq("user_id", user!.id) as any);
+        .eq("user_id", user!.id);
       const map: Record<string, string> = {};
       if (data) (data as MessageRead[]).forEach(r => { map[r.message_id] = r.read_at; });
       return map;
