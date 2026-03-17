@@ -534,28 +534,6 @@ const AgendaPage = () => {
               </CardContent>
             </Card>
 
-            {/* Selected day events */}
-            {selectedDate && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold">
-                    {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                  </h2>
-                  <Button size="sm" variant="outline" onClick={() => openCreate(selectedDate)} className="gap-1">
-                    <Plus className="w-3.5 h-3.5" /> Adicionar
-                  </Button>
-                </div>
-                {filteredEvents.length === 0 ? (
-                  <Card>
-                    <CardContent className="text-center py-8 text-muted-foreground">
-                      Nenhum evento neste dia
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-3">{filteredEvents.map(renderEventCard)}</div>
-                )}
-              </div>
-            )}
           </TabsContent>
 
           {/* ───── LIST VIEW ───── */}
