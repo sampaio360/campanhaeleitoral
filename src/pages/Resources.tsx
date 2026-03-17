@@ -95,7 +95,7 @@ const Resources = () => {
     if (!user || !campanhaId) return;
     setCreating(true);
 
-    const { error } = await (supabase.from("resource_requests" as any) as any).insert({
+    const { error } = await supabase.from("resource_requests").insert({
       campanha_id: campanhaId,
       user_id: user.id,
       tipo: form.tipo,
