@@ -194,7 +194,8 @@ const Municipios = () => {
 
           {/* ── Municípios Tab ── */}
           <TabsContent value="municipios">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+              <MunicipiosImport campanhaId={activeCampanhaId} />
               <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
                 <DialogTrigger asChild>
                   <Button onClick={() => { setEditingId(null); setForm(emptyForm); ibge.setQuery(""); }}>
