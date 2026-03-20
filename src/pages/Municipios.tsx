@@ -19,6 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useIBGEMunicipios, fetchPopulacao } from "@/hooks/useIBGEMunicipios";
 import { EleicoesTab } from "@/components/municipios/EleicoesTab";
 import { HistoricoVotacaoTab } from "@/components/municipios/HistoricoVotacaoTab";
+import { MunicipiosImport } from "@/components/municipios/MunicipiosImport";
+import { HistoricoImport } from "@/components/municipios/HistoricoImport";
 
 const ESTADOS_BR = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -192,7 +194,8 @@ const Municipios = () => {
 
           {/* ── Municípios Tab ── */}
           <TabsContent value="municipios">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-2 mb-4">
+              <MunicipiosImport campanhaId={activeCampanhaId} />
               <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
                 <DialogTrigger asChild>
                   <Button onClick={() => { setEditingId(null); setForm(emptyForm); ibge.setQuery(""); }}>

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Search, Vote, Save, X } from "lucide-react";
+import { HistoricoImport } from "./HistoricoImport";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -145,10 +146,13 @@ export function HistoricoVotacaoTab({ campanhaId }: Props) {
             <span className="text-sm text-muted-foreground ml-auto">{filtered.length} registro(s)</span>
           </div>
           {!isInserting && (
-            <Button size="sm" onClick={() => { setSelectedEleicaoId(""); setLinhas([]); setSelectedEleicaoId("pick"); }}
-              disabled={!eleicoes?.length || !municipios?.length}>
-              <Plus className="w-4 h-4 mr-2" /> Lançar Votação
-            </Button>
+            <div className="flex gap-2">
+              <HistoricoImport campanhaId={campanhaId} />
+              <Button size="sm" onClick={() => { setSelectedEleicaoId(""); setLinhas([]); setSelectedEleicaoId("pick"); }}
+                disabled={!eleicoes?.length || !municipios?.length}>
+                <Plus className="w-4 h-4 mr-2" /> Lançar Votação
+              </Button>
+            </div>
           )}
         </div>
       </CardHeader>
