@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 interface Props {
   campanhaId: string;
@@ -30,6 +31,26 @@ const VALID_ESTADOS = new Set([
 
 const VALID_PRIORIDADES = new Set(["critica", "alta", "media", "baixa"]);
 
+function parseRows(data: any[]): ParsedMunicipio[] {
+  return data.map((raw: any) => {
+    const nome = (raw.nome || raw.municipio || raw.cidade || "").toString().trim();
+    const estado = (raw.estado || raw.uf || "").toString().trim().toUpperCase();
+    const populacao = raw.populacao ? parseInt(raw.populacao) : null;
+    const meta_votos = raw.meta_votos ? parseInt(raw.meta_votos) : null;
+    const prioridade = VALID_PRIORIDADES.has((raw.prioridade || "").toString().toLowerCase())
+      ? (raw.prioridade || "").toString().toLowerCase() : "media";
+    const status = (raw.status || "").toString().toLowerCase() === "inativo" ? "inativo" : "ativo";
+
+    let error: string | undefined;
+    if (!nome) error = "Nome obrigatório";
+    else if (!estado) error = "Estado obrigatório";
+    else if (!VALID_ESTADOS.has(estado)) error = `UF inválida: ${estado}`;
+    else if (populacao !== null && isNaN(populacao)) error = "População inválida";
+
+    return { nome, estado, populacao, meta_votos, prioridade, status, error };
+  });
+}
+
 export function MunicipiosImport({ campanhaId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -45,33 +66,28 @@ export function MunicipiosImport({ campanhaId }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    const isXlsx = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const parsed: ParsedMunicipio[] = result.data.map((raw: any) => {
-          const nome = (raw.nome || raw.municipio || raw.cidade || "").toString().trim();
-          const estado = (raw.estado || raw.uf || "").toString().trim().toUpperCase();
-          const populacao = raw.populacao ? parseInt(raw.populacao) : null;
-          const meta_votos = raw.meta_votos ? parseInt(raw.meta_votos) : null;
-          const prioridade = VALID_PRIORIDADES.has((raw.prioridade || "").toLowerCase())
-            ? (raw.prioridade || "").toLowerCase() : "media";
-          const status = (raw.status || "").toLowerCase() === "inativo" ? "inativo" : "ativo";
-
-          let error: string | undefined;
-          if (!nome) error = "Nome obrigatório";
-          else if (!estado) error = "Estado obrigatório";
-          else if (!VALID_ESTADOS.has(estado)) error = `UF inválida: ${estado}`;
-          else if (populacao !== null && isNaN(populacao)) error = "População inválida";
-
-          return { nome, estado, populacao, meta_votos, prioridade, status, error };
-        });
-        setRows(parsed);
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const wb = XLSX.read(evt.target?.result, { type: "array" });
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        setRows(parseRows(data));
         setOpen(true);
-      },
-      error: () => toast({ title: "Erro ao ler arquivo", variant: "destructive" }),
-    });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (result) => {
+          setRows(parseRows(result.data));
+          setOpen(true);
+        },
+        error: () => toast({ title: "Erro ao ler arquivo", variant: "destructive" }),
+      });
+    }
     e.target.value = "";
   };
 
@@ -105,10 +121,17 @@ export function MunicipiosImport({ campanhaId }: Props) {
 
   return (
     <>
-      <input type="file" ref={fileRef} accept=".csv,.txt" className="hidden" onChange={handleFile} />
-      <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-        <Upload className="w-4 h-4 mr-2" /> Importar CSV
-      </Button>
+      <input type="file" ref={fileRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFile} />
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <a href="/modelo_municipios.xlsx" download>
+            <Download className="w-4 h-4 mr-2" /> Modelo
+          </a>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+          <Upload className="w-4 h-4 mr-2" /> Importar
+        </Button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -174,7 +197,7 @@ export function MunicipiosImport({ campanhaId }: Props) {
 
           <div className="flex items-center justify-between pt-2">
             <p className="text-xs text-muted-foreground">
-              Colunas esperadas: nome, estado/uf, populacao, meta_votos, prioridade, status
+              Colunas: nome, estado/uf, populacao, meta_votos, prioridade, status
             </p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

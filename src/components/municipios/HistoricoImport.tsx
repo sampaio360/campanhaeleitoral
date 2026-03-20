@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, CheckCircle2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 interface Props {
   campanhaId: string;
@@ -22,6 +23,9 @@ interface ParsedVoto {
   error?: string;
 }
 
+const normalize = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
 export function HistoricoImport({ campanhaId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -30,7 +34,6 @@ export function HistoricoImport({ campanhaId }: Props) {
   const [rows, setRows] = useState<ParsedVoto[]>([]);
   const [fileName, setFileName] = useState("");
 
-  // Fetch municipios to match names
   const { data: municipios } = useQuery({
     queryKey: ["municipios-names", campanhaId],
     queryFn: async () => {
@@ -45,49 +48,53 @@ export function HistoricoImport({ campanhaId }: Props) {
   const validRows = rows.filter(r => !r.error);
   const errorRows = rows.filter(r => !!r.error);
 
-  const normalize = (s: string) =>
-    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  function parseData(data: any[]): ParsedVoto[] {
+    const munis = municipios || [];
+    return data.map((raw: any) => {
+      const municipio_nome = (raw.municipio || raw.cidade || raw.nome || "").toString().trim();
+      const eleicao_ano = parseInt(raw.ano || raw.eleicao_ano || "0");
+      const cargo = (raw.cargo || "").toString().trim();
+      const votacao = parseInt(raw.votacao || raw.votos || "0");
+
+      const match = munis.find(m => normalize(m.nome) === normalize(municipio_nome));
+
+      let error: string | undefined;
+      if (!municipio_nome) error = "Município obrigatório";
+      else if (!match) error = `Município não encontrado: ${municipio_nome}`;
+      else if (!eleicao_ano || eleicao_ano < 1900) error = "Ano inválido";
+      else if (!cargo) error = "Cargo obrigatório";
+      else if (!votacao || isNaN(votacao)) error = "Votação inválida";
+
+      return { municipio_nome, municipio_id: match?.id || null, eleicao_ano, cargo, votacao, error };
+    });
+  }
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    const isXlsx = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const munis = municipios || [];
-        const parsed: ParsedVoto[] = result.data.map((raw: any) => {
-          const municipio_nome = (raw.municipio || raw.cidade || raw.nome || "").toString().trim();
-          const eleicao_ano = parseInt(raw.ano || raw.eleicao_ano || "0");
-          const cargo = (raw.cargo || "").toString().trim();
-          const votacao = parseInt(raw.votacao || raw.votos || "0");
-
-          // Match municipio by normalized name
-          const match = munis.find(m => normalize(m.nome) === normalize(municipio_nome));
-
-          let error: string | undefined;
-          if (!municipio_nome) error = "Município obrigatório";
-          else if (!match) error = `Município não encontrado: ${municipio_nome}`;
-          else if (!eleicao_ano || eleicao_ano < 1900) error = "Ano inválido";
-          else if (!cargo) error = "Cargo obrigatório";
-          else if (!votacao || isNaN(votacao)) error = "Votação inválida";
-
-          return {
-            municipio_nome,
-            municipio_id: match?.id || null,
-            eleicao_ano,
-            cargo,
-            votacao,
-            error,
-          };
-        });
-        setRows(parsed);
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const wb = XLSX.read(evt.target?.result, { type: "array" });
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        setRows(parseData(data));
         setOpen(true);
-      },
-      error: () => toast({ title: "Erro ao ler arquivo", variant: "destructive" }),
-    });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (result) => {
+          setRows(parseData(result.data));
+          setOpen(true);
+        },
+        error: () => toast({ title: "Erro ao ler arquivo", variant: "destructive" }),
+      });
+    }
     e.target.value = "";
   };
 
@@ -114,10 +121,17 @@ export function HistoricoImport({ campanhaId }: Props) {
 
   return (
     <>
-      <input type="file" ref={fileRef} accept=".csv,.txt" className="hidden" onChange={handleFile} />
-      <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-        <Upload className="w-4 h-4 mr-2" /> Importar CSV
-      </Button>
+      <input type="file" ref={fileRef} accept=".csv,.txt,.xlsx,.xls" className="hidden" onChange={handleFile} />
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <a href="/modelo_historico.xlsx" download>
+            <Download className="w-4 h-4 mr-2" /> Modelo
+          </a>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+          <Upload className="w-4 h-4 mr-2" /> Importar
+        </Button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
