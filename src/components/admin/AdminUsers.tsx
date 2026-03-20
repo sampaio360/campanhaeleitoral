@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,8 +14,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useToast } from "@/hooks/use-toast";
 import {
   UserPlus, Loader2, Trash2, RefreshCw, Copy, Eye, EyeOff,
-  Plus, X, Ban, ShieldCheck, UserCheck, Link2, Unlink, Search, Filter
+  Plus, X, Ban, ShieldCheck, UserCheck, Link2, Unlink, Search, Filter, Check
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -251,15 +252,23 @@ export function AdminUsers() {
     }
   });
 
-  const changeCampaignMutation = useMutation({
-    mutationFn: async ({ userId, campanhaId }: { userId: string; campanhaId: string | null }) => {
-      const { error } = await supabase.from('profiles').update({ campanha_id: campanhaId }).eq('id', userId);
-      if (error) throw error;
+  const toggleCampaignMutation = useMutation({
+    mutationFn: async ({ userId, campanhaId, checked, currentProfileCampanhaId }: { userId: string; campanhaId: string; checked: boolean; currentProfileCampanhaId: string | null }) => {
+      if (checked) {
+        await supabase.from('user_campanhas').insert({ user_id: userId, campanha_id: campanhaId });
+        if (!currentProfileCampanhaId) {
+          await supabase.from('profiles').update({ campanha_id: campanhaId }).eq('id', userId);
+        }
+      } else {
+        await supabase.from('user_campanhas').delete().eq('user_id', userId).eq('campanha_id', campanhaId);
+        if (currentProfileCampanhaId === campanhaId) {
+          await supabase.from('profiles').update({ campanha_id: null }).eq('id', userId);
+        }
+      }
     },
     onSuccess: () => {
       invalidateAll();
-      toast({ title: "Campanha atualizada!" });
-      setChangingCampaignUserId(null);
+      toast({ title: "Campanhas atualizadas!" });
     },
     onError: (error: any) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -541,28 +550,37 @@ export function AdminUsers() {
                         ))}
                         <Popover open={changingCampaignUserId === user.id} onOpenChange={(open) => setChangingCampaignUserId(open ? user.id : null)}>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Alterar campanha">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Gerenciar campanhas">
                               <RefreshCw className="w-3 h-3" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-56 p-3" align="start">
-                            <p className="text-xs font-medium mb-2">Campanha principal</p>
-                            <Select
-                              value={user.campanha_id || "__none__"}
-                              onValueChange={(v) => {
-                                changeCampaignMutation.mutate({ userId: user.id, campanhaId: v === "__none__" ? null : v });
-                              }}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nenhuma</SelectItem>
-                                {campanhas?.map(c => (
-                                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <PopoverContent className="w-64 p-3" align="start">
+                            <p className="text-xs font-medium mb-2">Campanhas vinculadas</p>
+                            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                              {campanhas?.map(c => {
+                                const isLinked = userCamps.some(uc => uc.id === c.id);
+                                return (
+                                  <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                                    <Checkbox
+                                      checked={isLinked}
+                                      disabled={toggleCampaignMutation.isPending}
+                                      onCheckedChange={(checked) => {
+                                        toggleCampaignMutation.mutate({
+                                          userId: user.id,
+                                          campanhaId: c.id,
+                                          checked: !!checked,
+                                          currentProfileCampanhaId: user.campanha_id,
+                                        });
+                                      }}
+                                    />
+                                    {c.nome}
+                                  </label>
+                                );
+                              })}
+                              {(!campanhas || campanhas.length === 0) && (
+                                <p className="text-xs text-muted-foreground py-2">Nenhuma campanha disponível</p>
+                              )}
+                            </div>
                           </PopoverContent>
                         </Popover>
                       </div>
