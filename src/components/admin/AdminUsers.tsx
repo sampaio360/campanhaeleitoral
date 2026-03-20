@@ -550,28 +550,37 @@ export function AdminUsers() {
                         ))}
                         <Popover open={changingCampaignUserId === user.id} onOpenChange={(open) => setChangingCampaignUserId(open ? user.id : null)}>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Alterar campanha">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" title="Gerenciar campanhas">
                               <RefreshCw className="w-3 h-3" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-56 p-3" align="start">
-                            <p className="text-xs font-medium mb-2">Campanha principal</p>
-                            <Select
-                              value={user.campanha_id || "__none__"}
-                              onValueChange={(v) => {
-                                changeCampaignMutation.mutate({ userId: user.id, campanhaId: v === "__none__" ? null : v });
-                              }}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">Nenhuma</SelectItem>
-                                {campanhas?.map(c => (
-                                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <PopoverContent className="w-64 p-3" align="start">
+                            <p className="text-xs font-medium mb-2">Campanhas vinculadas</p>
+                            <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                              {campanhas?.map(c => {
+                                const isLinked = userCamps.some(uc => uc.id === c.id);
+                                return (
+                                  <label key={c.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                                    <Checkbox
+                                      checked={isLinked}
+                                      disabled={toggleCampaignMutation.isPending}
+                                      onCheckedChange={(checked) => {
+                                        toggleCampaignMutation.mutate({
+                                          userId: user.id,
+                                          campanhaId: c.id,
+                                          checked: !!checked,
+                                          currentProfileCampanhaId: user.campanha_id,
+                                        });
+                                      }}
+                                    />
+                                    {c.nome}
+                                  </label>
+                                );
+                              })}
+                              {(!campanhas || campanhas.length === 0) && (
+                                <p className="text-xs text-muted-foreground py-2">Nenhuma campanha disponível</p>
+                              )}
+                            </div>
                           </PopoverContent>
                         </Popover>
                       </div>
