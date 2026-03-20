@@ -1,26 +1,27 @@
 
 
-## Melhoria #1: Campanha + Função no Dialog de Criação de Usuário
+## Ajuste: Vincular campanhas com checkboxes
 
-### Problema
-Ao criar um usuário em AdminUsers, apenas nome, email, senha e PIN são enviados. O usuário é criado "solto" -- sem campanha e sem função. O admin precisa fazer 2 passos manuais extras, que podem ser esquecidos.
+### Problema atual
+A coluna "Campanha" na tabela de usuarios usa um Select dropdown que so permite escolher UMA campanha principal (`profiles.campanha_id`). As campanhas extras via `user_campanhas` aparecem como badges mas nao tem interface intuitiva para gerenciar.
 
-### Solução
-Adicionar dois campos ao dialog de criação:
-1. **Campanha** (Select) -- pre-selecionada com a campanha ativa do admin
-2. **Função** (Select) -- lista de roles disponíveis (filtrando admin/master se não for master)
+### Solucao
+Substituir o popover com Select por um popover com **lista de checkboxes** mostrando todas as campanhas disponiveis. Marcar/desmarcar adiciona ou remove registros na tabela `user_campanhas` e define a primeira campanha marcada como `profiles.campanha_id`.
 
-### Alterações
+### Alteracoes em `src/components/admin/AdminUsers.tsx`
 
-**`src/components/admin/AdminUsers.tsx`**
-- Adicionar estados `newUserRole` e `newUserCampanhaId` (pre-setado com `activeCampanhaId`)
-- Adicionar dois `Select` no dialog: campanha e função
-- Enviar `role` e `campanha_id` no `createUserMutation` body
-- Resetar os novos campos no `resetCreateForm`
+1. **Substituir o popover de "Campanha principal"** (linhas 542-567) por um popover com checkboxes:
+   - Lista todas as campanhas com `Checkbox` ao lado do nome
+   - Checked = usuario participa (existe em `user_campanhas` OU `profiles.campanha_id`)
+   - Ao marcar: insere em `user_campanhas` e se nao tem `campanha_id` no profile, seta como principal
+   - Ao desmarcar: remove de `user_campanhas` e se era a `campanha_id` do profile, limpa
 
-**`supabase/functions/create-user/index.ts`**
-- Já aceita `role` e `campanha_id` no body -- nenhuma alteração necessária na edge function
+2. **Criar mutation `toggleCampaignMutation`** que:
+   - Se marcando: faz `insert` em `user_campanhas` + `update profiles.campanha_id` se vazio
+   - Se desmarcando: faz `delete` de `user_campanhas` + limpa `profiles.campanha_id` se era essa
+
+3. **Manter a logica `getUserCampanhas`** ja existente para exibir os badges
 
 ### Resultado
-Ao criar um usuário, ele já sai vinculado à campanha e com a função correta, eliminando passos manuais e risco de usuários órfãos.
+Interface clara onde o admin ve todas as campanhas como checkboxes e marca/desmarca para vincular o usuario, sem ambiguidade.
 
