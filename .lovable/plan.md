@@ -1,27 +1,34 @@
 
 
-## Ajuste: Vincular campanhas com checkboxes
+## Fix: Stale cache no preview
 
-### Problema atual
-A coluna "Campanha" na tabela de usuarios usa um Select dropdown que so permite escolher UMA campanha principal (`profiles.campanha_id`). As campanhas extras via `user_campanhas` aparecem como badges mas nao tem interface intuitiva para gerenciar.
+### Causa raiz
+O dominio real do preview e `id-preview--xxx.lovable.app`, mas o codigo em `main.tsx` so verifica `lovableproject.com`. O service worker nunca e desregistrado no preview, causando cache stale.
 
-### Solucao
-Substituir o popover com Select por um popover com **lista de checkboxes** mostrando todas as campanhas disponiveis. Marcar/desmarcar adiciona ou remove registros na tabela `user_campanhas` e define a primeira campanha marcada como `profiles.campanha_id`.
+### Correcao em `src/main.tsx`
 
-### Alteracoes em `src/components/admin/AdminUsers.tsx`
+Adicionar `lovable.app` na verificacao de host:
 
-1. **Substituir o popover de "Campanha principal"** (linhas 542-567) por um popover com checkboxes:
-   - Lista todas as campanhas com `Checkbox` ao lado do nome
-   - Checked = usuario participa (existe em `user_campanhas` OU `profiles.campanha_id`)
-   - Ao marcar: insere em `user_campanhas` e se nao tem `campanha_id` no profile, seta como principal
-   - Ao desmarcar: remove de `user_campanhas` e se era a `campanha_id` do profile, limpa
+```typescript
+const isPreviewHost =
+  window.location.hostname.includes("id-preview--") ||
+  window.location.hostname.includes("lovableproject.com") ||
+  window.location.hostname.includes("lovable.app");
+```
 
-2. **Criar mutation `toggleCampaignMutation`** que:
-   - Se marcando: faz `insert` em `user_campanhas` + `update profiles.campanha_id` se vazio
-   - Se desmarcando: faz `delete` de `user_campanhas` + limpa `profiles.campanha_id` se era essa
+Alem disso, limpar os caches do browser junto com o unregister do SW para garantir que nenhum conteudo stale persista:
 
-3. **Manter a logica `getUserCampanhas`** ja existente para exibir os badges
+```typescript
+if (isPreviewHost || isInIframe) {
+  navigator.serviceWorker?.getRegistrations().then((registrations) => {
+    registrations.forEach((r) => r.unregister());
+  });
+  caches.keys().then((names) => {
+    names.forEach((name) => caches.delete(name));
+  });
+}
+```
 
 ### Resultado
-Interface clara onde o admin ve todas as campanhas como checkboxes e marca/desmarca para vincular o usuario, sem ambiguidade.
+O SW sera desregistrado e todos os caches limpos quando rodar em qualquer dominio de preview do Lovable, eliminando o problema de versao antiga.
 
