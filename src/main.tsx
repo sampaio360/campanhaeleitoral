@@ -14,11 +14,15 @@ const isInIframe = (() => {
 
 const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
-  window.location.hostname.includes("lovableproject.com");
+  window.location.hostname.includes("lovableproject.com") ||
+  window.location.hostname.includes("lovable.app");
 
 if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
+  });
+  caches.keys().then((names) => {
+    names.forEach((name) => caches.delete(name));
   });
 } else {
   initOfflineSync();
