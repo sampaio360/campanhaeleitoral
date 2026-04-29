@@ -27,11 +27,8 @@ const Invite = () => {
     const fetchInvite = async () => {
       if (!token) { setError("Token inválido"); setLoading(false); return; }
 
-      const { data, error: err } = await supabase
-        .from("invite_links" as any)
-        .select("*")
-        .eq("token", token)
-        .is("used_at", null)
+      const { data, error: err } = await (supabase as any)
+        .rpc("get_invite_by_token", { _token: token })
         .maybeSingle();
 
       if (err || !data) {
