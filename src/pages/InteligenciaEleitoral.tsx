@@ -3,8 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, AlertCircle } from "lucide-react";
 
-// TODO: substituir pela URL real do site de Inteligência Eleitoral
-const EXTERNAL_URL = "https://example.com";
+const EXTERNAL_URL = "https://bahiaeleicao-dn3whwu7.manus.space/";
 
 const InteligenciaEleitoral = () => {
   const [blocked, setBlocked] = useState(false);
