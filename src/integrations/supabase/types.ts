@@ -463,6 +463,48 @@ export type Database = {
           },
         ]
       }
+      inteligencia_analises: {
+        Row: {
+          ativo: boolean
+          campanha_id: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          imagem_url: string | null
+          nome: string
+          ordem: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          ativo?: boolean
+          campanha_id: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          ordem?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          ativo?: boolean
+          campanha_id?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          ordem?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       invite_links: {
         Row: {
           campanha_id: string
