@@ -80,6 +80,7 @@ function AppContent() {
             <Route path="/municipios" element={<ProtectedRoute><Municipios /></ProtectedRoute>} />
             <Route path="/inteligencia" element={<ProtectedRoute><InteligenciaEleitoral /></ProtectedRoute>} />
             <Route path="/inteligencia/:id" element={<ProtectedRoute><InteligenciaEleitoral /></ProtectedRoute>} />
+            <Route path="/inteligencia/:id/full" element={<ProtectedRoute><InteligenciaEleitoral /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
             <Route path="/convite/:token" element={<Invite />} />
             <Route path="/cadastro/:token" element={<ExternalRegister />} />

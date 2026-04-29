@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExternalLink, AlertCircle, Brain, ArrowLeft, Loader2 } from "lucide-react";
+import { ExternalLink, AlertCircle, Brain, ArrowLeft, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useInteligenciaAnalises,
   useInteligenciaAnalise,
 } from "@/hooks/useInteligenciaAnalises";
 
-function Viewer({ id }: { id: string }) {
+function Viewer({ id, fullscreen }: { id: string; fullscreen: boolean }) {
   const navigate = useNavigate();
   const { data: analise, isLoading } = useInteligenciaAnalise(id);
   const [blocked, setBlocked] = useState(false);
@@ -32,6 +32,48 @@ function Viewer({ id }: { id: string }) {
     );
   }
 
+  // Fullscreen: sem Navbar, iframe ocupa 100vh, toolbar mínima flutuante
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-card gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate(`/inteligencia/${id}`)}>
+              <Minimize2 className="w-3.5 h-3.5 mr-1" /> Sair da tela cheia
+            </Button>
+            <span className="text-sm font-semibold truncate">{analise.nome}</span>
+          </div>
+          <Button variant="ghost" size="sm" asChild className="h-7">
+            <a href={analise.url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+              Navegador
+            </a>
+          </Button>
+        </div>
+        {blocked ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-6">
+            <AlertCircle className="w-10 h-10 text-amber-500" />
+            <p className="font-medium">Não foi possível carregar o conteúdo embutido</p>
+            <Button asChild>
+              <a href={analise.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" /> Abrir no navegador
+              </a>
+            </Button>
+          </div>
+        ) : (
+          <iframe
+            src={analise.url}
+            title={analise.nome}
+            className="flex-1 w-full border-0 block"
+            onError={() => setBlocked(true)}
+            referrerPolicy="no-referrer"
+            allow="geolocation; clipboard-read; clipboard-write"
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -42,11 +84,9 @@ function Viewer({ id }: { id: string }) {
           </Button>
           <span className="text-sm font-semibold truncate">{analise.nome}</span>
         </div>
-        <Button variant="ghost" size="sm" asChild className="h-7">
-          <a href={analise.url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-            Nova aba
-          </a>
+        <Button variant="ghost" size="sm" className="h-7" onClick={() => navigate(`/inteligencia/${id}/full`)}>
+          <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
+          Tela cheia
         </Button>
       </div>
       {blocked ? (
@@ -54,13 +94,11 @@ function Viewer({ id }: { id: string }) {
           <AlertCircle className="w-10 h-10 text-amber-500" />
           <p className="font-medium">Não foi possível carregar o conteúdo embutido</p>
           <p className="text-sm text-muted-foreground max-w-md">
-            Este site não permite ser exibido dentro de outra página. Use o botão abaixo para abrir em nova aba.
+            Este site não permite ser exibido dentro de outra página. Tente abrir em tela cheia.
           </p>
-          <Button asChild>
-            <a href={analise.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Abrir agora
-            </a>
+          <Button onClick={() => navigate(`/inteligencia/${id}/full`)}>
+            <Maximize2 className="w-4 h-4 mr-2" />
+            Abrir em tela cheia
           </Button>
         </div>
       ) : (
@@ -149,7 +187,9 @@ function Catalog() {
 
 const InteligenciaEleitoral = () => {
   const { id } = useParams<{ id?: string }>();
-  return id ? <Viewer id={id} /> : <Catalog />;
+  const location = useLocation();
+  const fullscreen = location.pathname.endsWith("/full");
+  return id ? <Viewer id={id} fullscreen={fullscreen} /> : <Catalog />;
 };
 
 export default InteligenciaEleitoral;
