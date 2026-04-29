@@ -75,14 +75,19 @@ export function AdminAccessControl() {
     },
   });
 
+  const visibleRegistry = useMemo(
+    () => ROUTE_REGISTRY.filter(mod => isMaster || !mod.masterOnly),
+    [isMaster],
+  );
+
   const allRoutes = useMemo(() => {
     const set = new Set<string>();
-    ROUTE_REGISTRY.forEach(mod => {
+    visibleRegistry.forEach(mod => {
       set.add(mod.route);
       mod.children?.forEach(child => set.add(child.route));
     });
     return Array.from(set);
-  }, []);
+  }, [visibleRegistry]);
 
   const isAllowed = (role: AppRole, route: string): boolean => {
     if (!rules) return true;
