@@ -5,13 +5,14 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import { Navbar } from "@/components/Navbar";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Shield, FileText, LayoutDashboard } from "lucide-react";
+import { Building2, Users, Shield, FileText, LayoutDashboard, Brain } from "lucide-react";
 import { AdminUsers } from "@/components/admin/AdminUsers";
 import { AdminCampanhas } from "@/components/admin/AdminCampanhas";
 import { AdminAccessControl } from "@/components/admin/AdminAccessControl";
 import { AdminUserAccessControl } from "@/components/admin/AdminUserAccessControl";
 import { AdminExternalForm } from "@/components/admin/AdminExternalForm";
 import { AdminDashboardWidgets } from "@/components/admin/AdminDashboardWidgets";
+import { AdminInteligencia } from "@/components/admin/AdminInteligencia";
 
 const adminTabs = [
   { value: "campanhas", label: "Campanhas", icon: Building2, step: 1, hint: "Crie e gerencie campanhas", route: "/admin?tab=campanhas", masterOnly: true },
@@ -19,6 +20,7 @@ const adminTabs = [
   { value: "permissions", label: "Permissões", icon: Shield, step: 3, hint: "Controle de acesso por função e por usuário", route: "/admin?tab=permissions" },
   { value: "external-form", label: "Form Externo", icon: FileText, hint: "Configure formulário público", route: "/admin?tab=external-form" },
   { value: "dashboard-widgets", label: "Dashboard", icon: LayoutDashboard, hint: "Ative ou desative widgets do Dashboard", route: "/admin?tab=dashboard-widgets" },
+  { value: "inteligencia", label: "Inteligência", icon: Brain, hint: "Cadastre análises externas que aparecem no módulo Inteligência Eleitoral", route: "/admin?tab=inteligencia" },
 ];
 
 const Admin = () => {
@@ -108,6 +110,7 @@ const Admin = () => {
           </TabsContent>
           <TabsContent value="external-form"><AdminExternalForm /></TabsContent>
           <TabsContent value="dashboard-widgets"><AdminDashboardWidgets /></TabsContent>
+          <TabsContent value="inteligencia"><AdminInteligencia /></TabsContent>
         </Tabs>
       </div>
     </div>
