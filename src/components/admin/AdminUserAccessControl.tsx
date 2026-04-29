@@ -395,7 +395,7 @@ export function AdminUserAccessControl() {
                 </tr>
               </thead>
               <tbody>
-                {ROUTE_REGISTRY.map(mod => {
+                {visibleRegistry.map(mod => {
                   if (!mod.children) return renderRouteRow(mod);
                   const isOpen = openModules.has(mod.id);
                   return [
