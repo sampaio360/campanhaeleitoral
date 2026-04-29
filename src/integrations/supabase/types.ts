@@ -1987,6 +1987,15 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       get_email_by_pin: { Args: { p_pin: string }; Returns: string }
+      get_invite_by_token: {
+        Args: { _token: string }
+        Returns: {
+          campanha_id: string
+          expires_at: string
+          id: string
+          used_at: string
+        }[]
+      }
       get_unread_message_count: {
         Args: { _campanha_id: string; _user_id: string }
         Returns: number
