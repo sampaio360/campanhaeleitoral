@@ -197,7 +197,7 @@ export function AdminAccessControl() {
             </tr>
           </thead>
           <tbody>
-            {ROUTE_REGISTRY.map(mod => {
+            {visibleRegistry.map(mod => {
               if (!mod.children) {
                 return renderRouteRow(mod);
               }
