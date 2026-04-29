@@ -1,112 +1,129 @@
-
 ## Objetivo
 
-Transformar o módulo **Inteligência Eleitoral** de um iframe único e fixo em um **catálogo de análises**: o admin cadastra várias análises (nome, descrição, link e imagem de capa) e elas aparecem automaticamente no módulo como blocos clicáveis. Ao clicar em um bloco, o sistema abre o iframe da análise selecionada (mesma experiência atual de tela cheia).
+Reestruturar o módulo **Inteligência Eleitoral** para que:
 
-Tudo isolado por **campanha** (cada campanha vê apenas as suas) e respeitando o **controle de acesso** existente (`/inteligencia` já está no sistema de permissões por função/usuário).
-
----
-
-## 1. Banco de dados (migration)
-
-Criar tabela `inteligencia_analises`:
-
-| Coluna | Tipo | Notas |
-|---|---|---|
-| `id` | uuid PK | `gen_random_uuid()` |
-| `campanha_id` | uuid NOT NULL | isolamento |
-| `nome` | text NOT NULL | título da análise |
-| `descricao` | text | subtítulo curto |
-| `url` | text NOT NULL | link a ser embutido |
-| `imagem_url` | text | capa do bloco |
-| `ordem` | int default 0 | ordenação manual |
-| `ativo` | boolean default true | esconder sem deletar |
-| `created_by` | uuid | auth.uid() |
-| `created_at` / `updated_at` | timestamptz | |
-
-**RLS** (mesmo padrão de `agenda_events` / `material_inventory`):
-- `Master access all` → `is_master(auth.uid())`
-- `Users access own campanha` → `campanha_id IN (SELECT p.campanha_id FROM profiles p WHERE p.id = auth.uid()) OR is_admin_of_campanha(auth.uid(), campanha_id) OR is_master(auth.uid())`
-
-**Storage**: criar bucket público `inteligencia-capas` para as imagens, com policies de upload/update/delete restritas a usuários autenticados da campanha (padrão idêntico ao já usado em avatares/foto do supporter).
+1. Apenas o **Master** cadastre análises (admins de campanha não veem mais a aba).
+2. Cada análise possa ser vinculada a **uma ou mais campanhas** (N:N).
+3. Usuários só vejam análises vinculadas à campanha ativa **e** com permissão `/inteligencia` liberada para sua função/usuário.
+4. A linha "Inteligência Eleitoral" no controle de permissões só apareça para o Master configurar (admin comum não enxerga).
 
 ---
 
-## 2. Admin: nova aba "Inteligência"
+## 1. Banco de dados
 
-Em `src/pages/Admin.tsx`, adicionar nova tab `inteligencia` (ícone `Brain`), visível para admin/master, com rota `/admin?tab=inteligencia` (entra no `canAccess`).
-
-Novo componente `src/components/admin/AdminInteligencia.tsx`:
-- Lista das análises da campanha ativa (filtra por `useActiveCampanhaId`).
-- Botão **Nova análise** abre Dialog com: nome, descrição, URL, upload de imagem de capa (AvatarUpload-like → bucket `inteligencia-capas`), ordem, switch ativo.
-- Editar / Excluir / Reordenar.
-- Usa React Query (`['inteligencia-analises', campanhaId]`) seguindo o padrão do projeto.
-
----
-
-## 3. Página do módulo: catálogo + visualizador
-
-Refatorar `src/pages/InteligenciaEleitoral.tsx` em duas visões controladas pela mesma rota:
-
-**Visão A — Catálogo (default)**
-- Header padrão (Navbar + título "Inteligência Eleitoral").
-- Grid responsivo de cards (2/3/4 colunas, mesmo estilo visual do `DashboardModuleGrid`).
-- Cada card: imagem de capa (16:9), nome, descrição curta, hover/active.
-- Filtra por `useActiveCampanhaId()` + `ativo = true`.
-- Empty state: "Nenhuma análise cadastrada. Peça ao administrador para adicionar em Admin → Inteligência."
-
-**Visão B — Visualizador**
-- Ao clicar num card, navegar para `/inteligencia/:id` (nova rota aninhada em `App.tsx`).
-- Mesma UX atual: toolbar fina com botão **Voltar** + nome da análise + **Nova aba**, e iframe ocupando o restante (layout full-height já implementado).
-- Mantém `referrerPolicy`, `allow`, fallback de bloqueio.
-
----
-
-## 4. Permissões
-
-Nada novo no schema de `access_control` — `/inteligencia` já existe. Apenas:
-- Garantir que o card "Inteligência Eleitoral" no Dashboard continue respeitando `canAccess('/inteligencia')`.
-- A nova subrota `/inteligencia/:id` herda automaticamente a checagem (o `useAccessControl` normaliza para o segmento pai `/inteligencia`).
-- A aba "Inteligência" do Admin fica restrita a admin/master via lógica de `Admin.tsx` (igual às outras abas).
-
----
-
-## 5. Arquivos afetados
-
-**Criados**
-- `supabase/migrations/<timestamp>_inteligencia_analises.sql` (tabela + RLS + bucket + policies)
-- `src/components/admin/AdminInteligencia.tsx`
-- `src/hooks/useInteligenciaAnalises.ts` (queries + mutations)
-
-**Editados**
-- `src/pages/InteligenciaEleitoral.tsx` (catálogo + visualizador)
-- `src/App.tsx` (rota `/inteligencia/:id`)
-- `src/pages/Admin.tsx` (nova tab)
-- `src/lib/routeRegistry.ts` (registrar `/admin?tab=inteligencia` se necessário)
-
----
-
-## Fluxo do usuário
+**Mudança estrutural**: trocar o `campanha_id` único da tabela `inteligencia_analises` por uma tabela de junção.
 
 ```text
-Admin → aba Inteligência → Nova análise (nome, link, imagem) → Salvar
-   │
-   ▼
-Usuário comum da campanha → Módulos → Inteligência Eleitoral
-   │
-   ▼
-Catálogo de cards (apenas da sua campanha)
-   │  clica num card
-   ▼
-/inteligencia/:id → iframe da análise em tela cheia + botão Voltar
+inteligencia_analises (1) ───< inteligencia_analise_campanhas >─── (1) campanhas
 ```
+
+Migração:
+
+- Criar `public.inteligencia_analise_campanhas`:
+  - `analise_id uuid NOT NULL` (FK lógica → `inteligencia_analises.id`, ON DELETE CASCADE via trigger ou cascade simples)
+  - `campanha_id uuid NOT NULL`
+  - `created_at timestamptz default now()`
+  - PK composta `(analise_id, campanha_id)`
+  - índice em `campanha_id`
+- Backfill: para cada análise existente, inserir 1 linha na nova tabela com o `campanha_id` atual.
+- Remover coluna `campanha_id` de `inteligencia_analises` (após backfill).
+- Atualizar RLS de `inteligencia_analises`:
+  - DROP das policies atuais (que usam `campanha_id`).
+  - **SELECT**: liberado se o usuário pertence a alguma das campanhas vinculadas (via subquery na tabela de junção) **OU** é Master.
+  - **INSERT/UPDATE/DELETE**: somente Master (`is_master(auth.uid())`).
+- RLS da nova `inteligencia_analise_campanhas`:
+  - **SELECT**: usuário da campanha vinculada **OU** Master.
+  - **INSERT/UPDATE/DELETE**: somente Master.
+- Bucket `inteligencia-capas` permanece igual (upload restrito a autenticado já existe; ajustar para Master apenas no upload, mas mantém leitura pública).
+
+---
+
+## 2. Hooks (`src/hooks/useInteligenciaAnalises.ts`)
+
+- `useInteligenciaAnalises` (catálogo do usuário): JOIN com `inteligencia_analise_campanhas` filtrando pela campanha ativa; retorna apenas `ativo = true`.
+- `useInteligenciaAnalisesAdmin` (Master): lista todas + array de `campanha_ids` vinculadas, sem filtro de campanha.
+- `useInteligenciaAnalise(id)`: garante checagem de vínculo com a campanha ativa antes de renderizar viewer (RLS já bloqueia, mas tratamos UX de "não encontrada").
+- `useUpsertInteligenciaAnalise`: aceita `campanha_ids: string[]` no payload; ao salvar, faz upsert da análise e re-sincroniza a tabela de junção (delete + insert das vinculadas) numa única mutation.
+- Permissão: hook só executa mutações se `isMaster` (verificação client + RLS server).
+
+---
+
+## 3. Admin: aba "Inteligência" (somente Master)
+
+`src/pages/Admin.tsx`:
+
+- Marcar a tab `inteligencia` como `masterOnly: true` (igual `campanhas`). Admin comum não verá mais a aba.
+
+`src/components/admin/AdminInteligencia.tsx`:
+
+- Mostrar **todas** as análises do sistema (não filtra por campanha ativa).
+- Coluna nova: **"Campanhas"** com badges dos nomes vinculados (ex: "Campanha A, Campanha B").
+- No dialog de criar/editar, adicionar um seletor **multi-select de campanhas** (lista todas as `campanhas` ativas) — campo obrigatório (mínimo 1).
+- Validação: bloquear submit se nenhuma campanha selecionada.
+
+---
+
+## 4. Controle de permissão (`/inteligencia`)
+
+`src/components/admin/AdminAccessControl.tsx` e `AdminUserAccessControl.tsx`:
+
+- Hoje listam todas as rotas de `routeRegistry`. Vamos marcar a rota `/inteligencia` como **`masterOnly: true`** no `routeRegistry.ts`.
+- Filtrar a lista renderizada: se `route.masterOnly && !isMaster`, esconder a linha. Assim, admin comum não vê nem configura a permissão de Inteligência — quem decide acesso é o Master, mas a função/usuário ainda controla quem **abre** o módulo dentro da campanha.
+
+Resultado: o Master habilita a permissão para uma função (ex: "Coordenador") e vincula a análise X à Campanha Y. Um coordenador da Campanha Y verá a análise X; um coordenador da Campanha Z não verá.
+
+---
+
+## 5. Página do módulo (`InteligenciaEleitoral.tsx`)
+
+Sem mudança visual:
+
+- O `useInteligenciaAnalises` já retornará apenas as análises da campanha ativa (via novo JOIN).
+- A checagem de permissão `/inteligencia` já é feita pelo `ProtectedRoute` + `useAccessControl`.
+- Empty state atualiza texto: "Nenhuma análise disponível para esta campanha."
+
+---
+
+## 6. Fluxo final
+
+```text
+MASTER  →  Admin → Inteligência → Nova análise
+              │   nome, URL, imagem, ordem, ativo
+              │   campanhas vinculadas: [Campanha A, Campanha B]  ← novo
+              ▼
+         inteligencia_analises  +  inteligencia_analise_campanhas
+
+USUÁRIO da Campanha A com permissão /inteligencia
+              │
+              ▼
+         Catálogo mostra a análise
+              │
+              ▼
+         Tela cheia (já implementada)
+
+USUÁRIO da Campanha C ou sem permissão → não vê o módulo / catálogo vazio
+```
+
+---
+
+## Arquivos afetados
+
+**Migration nova**
+- `supabase/migrations/<ts>_inteligencia_n_to_n.sql` (cria junção, backfill, drop coluna, novas RLS)
+
+**Editados**
+- `src/hooks/useInteligenciaAnalises.ts` (queries + mutations N:N)
+- `src/components/admin/AdminInteligencia.tsx` (multi-select de campanhas, lista global)
+- `src/pages/Admin.tsx` (`masterOnly: true` na aba Inteligência)
+- `src/lib/routeRegistry.ts` (marcar `/inteligencia` como `masterOnly`)
+- `src/components/admin/AdminAccessControl.tsx` (esconder rotas masterOnly de não-Masters)
+- `src/components/admin/AdminUserAccessControl.tsx` (mesmo filtro)
+- `src/pages/InteligenciaEleitoral.tsx` (apenas ajuste de texto do empty state)
 
 ---
 
 ## Pontos de confirmação
 
-1. URL do link da análise: assumirei aceitar qualquer URL `https://`. Se quiser validar domínios permitidos, me avise.
-2. Imagem de capa: opcional. Se vazia, mostro um placeholder com ícone `Brain` e cor de fundo da categoria (padrão `bg-cyan-100`).
-3. Ordenação: por campo `ordem` ASC, depois `created_at` DESC.
-
-Se aprovar, implemento tudo no próximo passo.
+1. **Campanhas no formulário**: multi-select com checkboxes (lista todas ativas). OK?
+2. **Master "vê tudo"**: o Master, mesmo sem campanha ativa, vê **todas** as análises no Admin. No catálogo do módulo (`/inteligencia`), Master vê só as da campanha ativa atual (igual qualquer outra). OK?
+3. **Backfill**: análises hoje cadastradas serão automaticamente vinculadas à campanha em que foram criadas — nada se perde.
