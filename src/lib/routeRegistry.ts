@@ -7,6 +7,8 @@ export interface RouteEntry {
   label: string;
   route: string;
   children?: RouteEntry[];
+  /** Se true, só Master pode visualizar/configurar permissão dessa rota */
+  masterOnly?: boolean;
 }
 
 export const ROUTE_REGISTRY: RouteEntry[] = [
