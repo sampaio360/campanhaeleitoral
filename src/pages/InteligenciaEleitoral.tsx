@@ -43,12 +43,6 @@ function Viewer({ id, fullscreen }: { id: string; fullscreen: boolean }) {
             </Button>
             <span className="text-sm font-semibold truncate">{analise.nome}</span>
           </div>
-          <Button variant="ghost" size="sm" asChild className="h-7">
-            <a href={analise.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-              Navegador
-            </a>
-          </Button>
         </div>
         {blocked ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-6">
