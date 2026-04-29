@@ -463,10 +463,35 @@ export type Database = {
           },
         ]
       }
+      inteligencia_analise_campanhas: {
+        Row: {
+          analise_id: string
+          campanha_id: string
+          created_at: string
+        }
+        Insert: {
+          analise_id: string
+          campanha_id: string
+          created_at?: string
+        }
+        Update: {
+          analise_id?: string
+          campanha_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "iac_analise_fk"
+            columns: ["analise_id"]
+            isOneToOne: false
+            referencedRelation: "inteligencia_analises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inteligencia_analises: {
         Row: {
           ativo: boolean
-          campanha_id: string
           created_at: string
           created_by: string | null
           descricao: string | null
@@ -479,7 +504,6 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
-          campanha_id: string
           created_at?: string
           created_by?: string | null
           descricao?: string | null
@@ -492,7 +516,6 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
-          campanha_id?: string
           created_at?: string
           created_by?: string | null
           descricao?: string | null
