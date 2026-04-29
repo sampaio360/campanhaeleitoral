@@ -20,7 +20,7 @@ const adminTabs = [
   { value: "permissions", label: "Permissões", icon: Shield, step: 3, hint: "Controle de acesso por função e por usuário", route: "/admin?tab=permissions" },
   { value: "external-form", label: "Form Externo", icon: FileText, hint: "Configure formulário público", route: "/admin?tab=external-form" },
   { value: "dashboard-widgets", label: "Dashboard", icon: LayoutDashboard, hint: "Ative ou desative widgets do Dashboard", route: "/admin?tab=dashboard-widgets" },
-  { value: "inteligencia", label: "Inteligência", icon: Brain, hint: "Cadastre análises externas que aparecem no módulo Inteligência Eleitoral", route: "/admin?tab=inteligencia" },
+  { value: "inteligencia", label: "Inteligência", icon: Brain, hint: "Cadastre análises externas que aparecem no módulo Inteligência Eleitoral", route: "/admin?tab=inteligencia", masterOnly: true },
 ];
 
 const Admin = () => {
