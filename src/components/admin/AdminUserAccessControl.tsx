@@ -85,7 +85,11 @@ function resolveEffectiveAccess(
 
 // --- Main Component ---
 export function AdminUserAccessControl() {
-  const { selectedCampanhaId, campanhaId } = useAuth();
+  const { selectedCampanhaId, campanhaId, isMaster } = useAuth();
+  const visibleRegistry = useMemo(
+    () => ROUTE_REGISTRY.filter(mod => isMaster || !mod.masterOnly),
+    [isMaster],
+  );
   const effectiveCampanhaId = selectedCampanhaId || campanhaId;
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
