@@ -7,6 +7,8 @@ export interface RouteEntry {
   label: string;
   route: string;
   children?: RouteEntry[];
+  /** Se true, só Master pode visualizar/configurar permissão dessa rota */
+  masterOnly?: boolean;
 }
 
 export const ROUTE_REGISTRY: RouteEntry[] = [
@@ -37,7 +39,7 @@ export const ROUTE_REGISTRY: RouteEntry[] = [
   { id: "reports", label: "Relatórios", route: "/reports" },
   { id: "historico", label: "Histórico", route: "/historico" },
   { id: "roi", label: "ROI", route: "/roi" },
-  { id: "inteligencia", label: "Inteligência Eleitoral", route: "/inteligencia" },
+  { id: "inteligencia", label: "Inteligência Eleitoral", route: "/inteligencia", masterOnly: true },
   
 ];
 

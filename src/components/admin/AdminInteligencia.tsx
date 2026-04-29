@@ -1,22 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Loader2, Brain, ImagePlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  useInteligenciaAnalises,
+  useInteligenciaAnalisesAdmin,
   useUpsertInteligenciaAnalise,
   useDeleteInteligenciaAnalise,
   uploadCapaInteligencia,
   type InteligenciaAnalise,
 } from "@/hooks/useInteligenciaAnalises";
-import { useActiveCampanhaId } from "@/hooks/useCampanhaData";
 
 interface FormState {
   id?: string;
@@ -26,6 +29,7 @@ interface FormState {
   imagem_url: string;
   ordem: number;
   ativo: boolean;
+  campanha_ids: string[];
 }
 
 const empty: FormState = {
@@ -35,17 +39,35 @@ const empty: FormState = {
   imagem_url: "",
   ordem: 0,
   ativo: true,
+  campanha_ids: [],
 };
 
+function useAllCampanhas() {
+  return useQuery({
+    queryKey: ["campanhas-all-for-inteligencia"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campanhas")
+        .select("id, nome, municipio")
+        .is("deleted_at", null)
+        .order("nome");
+      if (error) throw error;
+      return data as { id: string; nome: string; municipio: string | null }[];
+    },
+  });
+}
+
 export function AdminInteligencia() {
-  const campanhaId = useActiveCampanhaId();
-  const { data: analises, isLoading } = useInteligenciaAnalises();
+  const { data: analises, isLoading } = useInteligenciaAnalisesAdmin();
+  const { data: campanhas } = useAllCampanhas();
   const upsert = useUpsertInteligenciaAnalise();
   const del = useDeleteInteligenciaAnalise();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(empty);
   const [uploading, setUploading] = useState(false);
+
+  const campanhaMap = new Map((campanhas || []).map((c) => [c.id, c.nome]));
 
   const startCreate = () => {
     setForm(empty);
@@ -61,6 +83,7 @@ export function AdminInteligencia() {
       imagem_url: a.imagem_url ?? "",
       ordem: a.ordem,
       ativo: a.ativo,
+      campanha_ids: a.campanha_ids ?? [],
     });
     setOpen(true);
   };
@@ -77,10 +100,23 @@ export function AdminInteligencia() {
     }
   };
 
+  const toggleCampanha = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      campanha_ids: f.campanha_ids.includes(id)
+        ? f.campanha_ids.filter((x) => x !== id)
+        : [...f.campanha_ids, id],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.nome.trim() || !form.url.trim()) {
       toast({ title: "Preencha nome e URL", variant: "destructive" });
+      return;
+    }
+    if (form.campanha_ids.length === 0) {
+      toast({ title: "Selecione ao menos uma campanha", variant: "destructive" });
       return;
     }
     try {
@@ -92,6 +128,7 @@ export function AdminInteligencia() {
         imagem_url: form.imagem_url.trim() || null,
         ordem: Number(form.ordem) || 0,
         ativo: form.ativo,
+        campanha_ids: form.campanha_ids,
       });
       toast({ title: form.id ? "Análise atualizada" : "Análise criada" });
       setOpen(false);
@@ -110,16 +147,6 @@ export function AdminInteligencia() {
     }
   };
 
-  if (!campanhaId) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-muted-foreground text-sm">
-          Selecione uma campanha para gerenciar as análises.
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -129,7 +156,7 @@ export function AdminInteligencia() {
             Inteligência Eleitoral
           </CardTitle>
           <CardDescription>
-            Cadastre análises externas. Cada análise vira um card no módulo, visível apenas para a campanha atual.
+            Cadastre análises externas e vincule a uma ou mais campanhas. Apenas usuários da campanha vinculada (e com permissão) verão a análise.
           </CardDescription>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -138,7 +165,7 @@ export function AdminInteligencia() {
               <Plus className="w-4 h-4" /> Nova análise
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{form.id ? "Editar análise" : "Nova análise"}</DialogTitle>
             </DialogHeader>
@@ -187,6 +214,33 @@ export function AdminInteligencia() {
                 </div>
                 {uploading && <p className="text-xs text-muted-foreground mt-1">Enviando...</p>}
               </div>
+
+              <div>
+                <Label>Campanhas com acesso *</Label>
+                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2 mt-1">
+                  {!campanhas || campanhas.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhuma campanha disponível</p>
+                  ) : (
+                    campanhas.map((c) => (
+                      <div key={c.id} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`camp-${c.id}`}
+                          checked={form.campanha_ids.includes(c.id)}
+                          onCheckedChange={() => toggleCampanha(c.id)}
+                        />
+                        <Label htmlFor={`camp-${c.id}`} className="text-sm font-normal cursor-pointer flex-1">
+                          {c.nome}
+                          {c.municipio && <span className="text-muted-foreground"> · {c.municipio}</span>}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {form.campanha_ids.length} selecionada(s)
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Ordem</Label>
@@ -230,7 +284,7 @@ export function AdminInteligencia() {
               <TableRow>
                 <TableHead className="w-16">Capa</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">URL</TableHead>
+                <TableHead>Campanhas</TableHead>
                 <TableHead className="w-20">Ordem</TableHead>
                 <TableHead className="w-20">Ativo</TableHead>
                 <TableHead className="w-24 text-right">Ações</TableHead>
@@ -254,8 +308,18 @@ export function AdminInteligencia() {
                       <div className="text-xs text-muted-foreground line-clamp-1">{a.descricao}</div>
                     )}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground truncate max-w-[260px]">
-                    {a.url}
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[280px]">
+                      {(a.campanha_ids ?? []).length === 0 ? (
+                        <span className="text-xs text-muted-foreground italic">Sem vínculo</span>
+                      ) : (
+                        (a.campanha_ids ?? []).map((cid) => (
+                          <Badge key={cid} variant="secondary" className="text-xs">
+                            {campanhaMap.get(cid) ?? "—"}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{a.ordem}</TableCell>
                   <TableCell>{a.ativo ? "Sim" : "Não"}</TableCell>

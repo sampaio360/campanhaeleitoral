@@ -5,7 +5,6 @@ import { useAuth } from "@/hooks/useAuth";
 
 export interface InteligenciaAnalise {
   id: string;
-  campanha_id: string;
   nome: string;
   descricao: string | null;
   url: string;
@@ -15,18 +14,28 @@ export interface InteligenciaAnalise {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  campanha_ids?: string[];
 }
 
+/** Catálogo do usuário: análises vinculadas à campanha ativa */
 export function useInteligenciaAnalises(opts: { onlyActive?: boolean } = {}) {
   const campanhaId = useActiveCampanhaId();
   return useQuery({
     queryKey: ["inteligencia-analises", campanhaId, opts.onlyActive ?? false],
     queryFn: async () => {
       if (!campanhaId) return [];
+      // 1) Pega ids das análises vinculadas à campanha
+      const { data: vinc, error: vincErr } = await supabase
+        .from("inteligencia_analise_campanhas")
+        .select("analise_id")
+        .eq("campanha_id", campanhaId);
+      if (vincErr) throw vincErr;
+      const ids = (vinc || []).map((v: any) => v.analise_id);
+      if (ids.length === 0) return [];
       let q = supabase
         .from("inteligencia_analises")
         .select("*")
-        .eq("campanha_id", campanhaId)
+        .in("id", ids)
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
       if (opts.onlyActive) q = q.eq("ativo", true);
@@ -35,6 +44,38 @@ export function useInteligenciaAnalises(opts: { onlyActive?: boolean } = {}) {
       return (data || []) as InteligenciaAnalise[];
     },
     enabled: !!campanhaId,
+  });
+}
+
+/** Admin (Master): lista todas as análises com seus vínculos */
+export function useInteligenciaAnalisesAdmin() {
+  return useQuery({
+    queryKey: ["inteligencia-analises-admin"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inteligencia_analises")
+        .select("*")
+        .order("ordem", { ascending: true })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const analises = (data || []) as InteligenciaAnalise[];
+      if (analises.length === 0) return analises;
+      const { data: links, error: linksErr } = await supabase
+        .from("inteligencia_analise_campanhas")
+        .select("analise_id, campanha_id")
+        .in(
+          "analise_id",
+          analises.map((a) => a.id),
+        );
+      if (linksErr) throw linksErr;
+      const map = new Map<string, string[]>();
+      (links || []).forEach((l: any) => {
+        const arr = map.get(l.analise_id) || [];
+        arr.push(l.campanha_id);
+        map.set(l.analise_id, arr);
+      });
+      return analises.map((a) => ({ ...a, campanha_ids: map.get(a.id) || [] }));
+    },
   });
 }
 
@@ -63,16 +104,19 @@ export interface AnaliseInput {
   imagem_url?: string | null;
   ordem?: number;
   ativo?: boolean;
+  campanha_ids: string[];
 }
 
 export function useUpsertInteligenciaAnalise() {
   const qc = useQueryClient();
-  const campanhaId = useActiveCampanhaId();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: AnaliseInput) => {
-      if (!campanhaId) throw new Error("Nenhuma campanha selecionada");
-      const { id, ...rest } = input;
+      const { id, campanha_ids, ...rest } = input;
+      if (!campanha_ids || campanha_ids.length === 0) {
+        throw new Error("Selecione ao menos uma campanha");
+      }
+      let analiseId = id;
       if (id) {
         const { error } = await supabase
           .from("inteligencia_analises")
@@ -80,16 +124,29 @@ export function useUpsertInteligenciaAnalise() {
           .eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("inteligencia_analises").insert({
-          ...rest,
-          campanha_id: campanhaId,
-          created_by: user?.id ?? null,
-        });
+        const { data, error } = await supabase
+          .from("inteligencia_analises")
+          .insert({ ...rest, created_by: user?.id ?? null })
+          .select("id")
+          .single();
         if (error) throw error;
+        analiseId = data.id;
       }
+      // Re-sincroniza vínculos
+      const { error: delErr } = await supabase
+        .from("inteligencia_analise_campanhas")
+        .delete()
+        .eq("analise_id", analiseId!);
+      if (delErr) throw delErr;
+      const rows = campanha_ids.map((cid) => ({ analise_id: analiseId!, campanha_id: cid }));
+      const { error: insErr } = await supabase
+        .from("inteligencia_analise_campanhas")
+        .insert(rows);
+      if (insErr) throw insErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inteligencia-analises"] });
+      qc.invalidateQueries({ queryKey: ["inteligencia-analises-admin"] });
     },
   });
 }
@@ -106,6 +163,7 @@ export function useDeleteInteligenciaAnalise() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inteligencia-analises"] });
+      qc.invalidateQueries({ queryKey: ["inteligencia-analises-admin"] });
     },
   });
 }

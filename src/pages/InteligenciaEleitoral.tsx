@@ -136,8 +136,8 @@ function Catalog() {
         ) : !analises || analises.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center text-sm text-muted-foreground">
-              Nenhuma análise cadastrada ainda.<br />
-              Peça ao administrador para adicioná-las em <strong>Admin → Inteligência</strong>.
+              Nenhuma análise disponível para esta campanha.<br />
+              As análises são cadastradas pelo Master e vinculadas às campanhas.
             </CardContent>
           </Card>
         ) : (
