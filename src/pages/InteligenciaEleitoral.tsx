@@ -145,7 +145,7 @@ function Catalog() {
             {analises.map((a) => (
               <Card
                 key={a.id}
-                onClick={() => navigate(`/inteligencia/${a.id}`)}
+                onClick={() => navigate(`/inteligencia/${a.id}/full`)}
                 className={cn(
                   "cursor-pointer overflow-hidden border-0 transition-all hover:shadow-lg active:scale-[0.98] hover:scale-[1.02]"
                 )}
