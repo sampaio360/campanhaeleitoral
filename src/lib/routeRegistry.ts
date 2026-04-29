@@ -39,7 +39,7 @@ export const ROUTE_REGISTRY: RouteEntry[] = [
   { id: "reports", label: "Relatórios", route: "/reports" },
   { id: "historico", label: "Histórico", route: "/historico" },
   { id: "roi", label: "ROI", route: "/roi" },
-  { id: "inteligencia", label: "Inteligência Eleitoral", route: "/inteligencia" },
+  { id: "inteligencia", label: "Inteligência Eleitoral", route: "/inteligencia", masterOnly: true },
   
 ];
 
