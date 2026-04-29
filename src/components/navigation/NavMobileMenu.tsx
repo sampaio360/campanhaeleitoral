@@ -6,7 +6,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Menu, BarChart3, DollarSign, Users, FileText, MapPin, Package, CalendarDays, Route, MessageCircle, TrendingUp, History, Building2, Settings, LayoutGrid } from "lucide-react";
+import { Menu, BarChart3, DollarSign, Users, FileText, MapPin, Package, CalendarDays, Route, MessageCircle, TrendingUp, History, Building2, Settings, LayoutGrid, Brain } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +26,7 @@ const navItems = [
   { icon: MessageCircle, label: "Mensagens", path: "/mensagens" },
   { icon: FileText, label: "Relatórios", path: "/reports" },
   { icon: History, label: "Histórico", path: "/historico" },
+  { icon: Brain, label: "Inteligência Eleitoral", path: "/inteligencia" },
 ];
 
 const adminItems = [

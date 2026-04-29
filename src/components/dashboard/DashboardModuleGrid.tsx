@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Route, MessageCircle, TrendingUp, History, Building2, CalendarDays } from "lucide-react";
+import { BarChart3, DollarSign, Users, FileText, Settings, MapPin, Package, Route, MessageCircle, TrendingUp, History, Building2, CalendarDays, Brain } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useModuleStats } from "./useModuleStats";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,8 +19,9 @@ const moduleColors: Record<string, { bg: string; icon: string; hoverBg: string }
   resources:  { bg: "bg-orange-100", icon: "text-orange-700", hoverBg: "hover:bg-orange-200" },
   mensagens:  { bg: "bg-yellow-100", icon: "text-yellow-700", hoverBg: "hover:bg-yellow-200" },
   reports:    { bg: "bg-sky-100", icon: "text-sky-700", hoverBg: "hover:bg-sky-200" },
-  historico:  { bg: "bg-blue-100", icon: "text-blue-700", hoverBg: "hover:bg-blue-200" },
-  admin:      { bg: "bg-slate-200", icon: "text-slate-700", hoverBg: "hover:bg-slate-300" },
+  historico:    { bg: "bg-blue-100", icon: "text-blue-700", hoverBg: "hover:bg-blue-200" },
+  inteligencia: { bg: "bg-cyan-100", icon: "text-cyan-700", hoverBg: "hover:bg-cyan-200" },
+  admin:        { bg: "bg-slate-200", icon: "text-slate-700", hoverBg: "hover:bg-slate-300" },
 };
 
 export function DashboardModuleGrid() {
@@ -52,6 +53,7 @@ export function DashboardModuleGrid() {
     // 5. Relatórios & Histórico
     { id: "reports", title: "Relatórios", icon: FileText, route: "/reports", stat: `${stats.reportsCount} disponíveis` },
     { id: "historico", title: "Histórico", icon: History, route: "/historico", stat: "Atividades" },
+    { id: "inteligencia", title: "Inteligência Eleitoral", icon: Brain, route: "/inteligencia", stat: "Análises externas" },
   ];
 
   if (isAdmin) {

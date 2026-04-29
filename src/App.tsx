@@ -35,6 +35,7 @@ const Invite = lazy(() => import("./pages/Invite"));
 const ExternalRegister = lazy(() => import("./pages/ExternalRegister"));
 const ExternalDataCollection = lazy(() => import("./pages/ExternalDataCollection"));
 const Install = lazy(() => import("./pages/Install"));
+const InteligenciaEleitoral = lazy(() => import("./pages/InteligenciaEleitoral"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ function AppContent() {
             <Route path="/roi" element={<ProtectedRoute><ROI /></ProtectedRoute>} />
             <Route path="/modulos" element={<ProtectedRoute><Modulos /></ProtectedRoute>} />
             <Route path="/municipios" element={<ProtectedRoute><Municipios /></ProtectedRoute>} />
+            <Route path="/inteligencia" element={<ProtectedRoute><InteligenciaEleitoral /></ProtectedRoute>} />
             <Route path="/historico" element={<ProtectedRoute><Audit /></ProtectedRoute>} />
             <Route path="/convite/:token" element={<Invite />} />
             <Route path="/cadastro/:token" element={<ExternalRegister />} />
