@@ -43,8 +43,12 @@ export function AvatarUpload({ currentUrl, fallback, onUploaded, folder, size = 
     setUploading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado.");
+
       const ext = file.name.split(".").pop();
-      const path = `${folder}/${crypto.randomUUID()}.${ext}`;
+      // Path must start with auth.uid() to satisfy storage RLS policies
+      const path = `${user.id}/${folder}-${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
