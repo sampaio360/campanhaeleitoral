@@ -38,8 +38,8 @@ function Viewer({ id, fullscreen }: { id: string; fullscreen: boolean }) {
       <div className="fixed inset-0 bg-background flex flex-col">
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-card gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate(`/inteligencia/${id}`)}>
-              <Minimize2 className="w-3.5 h-3.5 mr-1" /> Sair da tela cheia
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => navigate("/inteligencia")}>
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Voltar
             </Button>
             <span className="text-sm font-semibold truncate">{analise.nome}</span>
           </div>
@@ -145,7 +145,7 @@ function Catalog() {
             {analises.map((a) => (
               <Card
                 key={a.id}
-                onClick={() => navigate(`/inteligencia/${a.id}`)}
+                onClick={() => navigate(`/inteligencia/${a.id}/full`)}
                 className={cn(
                   "cursor-pointer overflow-hidden border-0 transition-all hover:shadow-lg active:scale-[0.98] hover:scale-[1.02]"
                 )}
