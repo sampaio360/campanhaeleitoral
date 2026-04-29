@@ -104,11 +104,8 @@ export default function ExternalRegister() {
 
   const loadInviteAndConfig = async (t: string) => {
     try {
-      const { data: inviteData, error: inviteErr } = await supabase
-        .from("invite_links")
-        .select("campanha_id")
-        .eq("token", t)
-        .is("used_at", null)
+      const { data: inviteData, error: inviteErr } = await (supabase as any)
+        .rpc("get_invite_by_token", { _token: t })
         .maybeSingle();
 
       if (inviteErr || !inviteData) {
