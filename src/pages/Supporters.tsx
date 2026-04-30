@@ -136,11 +136,15 @@ const Supporters = () => {
     queryKey: ["invite-link-for-supporters", effectiveCampanhaId],
     queryFn: async () => {
       if (!effectiveCampanhaId) return null;
+      const nowIso = new Date().toISOString();
+      // Pega o token mais recente que ainda não foi usado E não está expirado.
+      // Tokens sem expires_at (NULL) também são válidos.
       const { data } = await supabase
         .from("invite_links")
-        .select("token")
+        .select("token, expires_at")
         .eq("campanha_id", effectiveCampanhaId)
         .is("used_at", null)
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
